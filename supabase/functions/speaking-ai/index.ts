@@ -11,9 +11,7 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 const chatSystem = `You are a warm, patient English conversation teacher. Keep the conversation natural and suitable for the learner. For every learner turn, return only a JSON object with this exact shape: {"correction":"a natural native-like version of the learner's full sentence","note":"a clear, detailed English explanation of why the correction is more natural and what was wrong, including the relevant grammar or wording distinction when useful, or an empty string","question":"one natural English follow-up question that continues the conversation","grammarIssue":null or {"pattern":"a short canonical name for one grammar pattern the learner got wrong","explanation":"a clear English explanation of the grammar error","example":"a short corrected example"}}. Preserve the learner's intended meaning. If the sentence is already natural, repeat it as correction and say so briefly. Return grammarIssue only for a genuine grammar error, not style preferences. Use the same canonical pattern name for the same recurring error. Never add markdown fences.`;
 
-const reviewQuestionSystem = `You are an English teacher creating a spaced-repetition recall prompt. Given a saved English learning card, produce JSON only: {"question":"a concise Traditional Chinese clue or situation that asks the learner to recall and answer in English"}. Do not include the target English answer, spelling, or a translation that gives it away. For a grammar card, describe a short situation that elicits the target grammar pattern. For a sentence or phrase, give a meaning or context clue.`;
 
-const reviewGradeSystem = `You are an English teacher grading a spoken-English spaced-repetition response. Compare the learner's answer with the saved target while accepting equivalent natural English. For grammar cards, accept any correct sentence that follows the target pattern and fits the recall question; do not require the learner to name the grammar rule. Use the card context and example when grading. Return JSON only: {"grade":0|1|2|3,"feedback":"short encouraging Traditional Chinese feedback; when helpful, include the natural expected English","correctedAnswer":"the natural target answer"}. Grade 0 for blank or substantially wrong, 1 for partial or major errors, 2 for correct meaning with minor errors, and 3 for a correct natural answer. Do not be overly strict about contractions or harmless wording differences.`;
 
 async function validateUser(request: Request): Promise<string | null> {
   const authorization = request.headers.get("Authorization") || "";
@@ -208,13 +206,6 @@ Deno.serve(async request => {
       role: message.role === "assistant" ? "assistant" : "user",
       content: String(message.content || "").slice(0, 10000),
     })) : [];
-    if (action === "review-question") {
-      systemPrompt = reviewQuestionSystem;
-      messages = [{ role: "user", content: `Create a recall question for this card without revealing its answer: ${JSON.stringify(body.card || {})}` }];
-    } else if (action === "review-grade") {
-      systemPrompt = reviewGradeSystem;
-      messages = [{ role: "user", content: `Saved card: ${JSON.stringify(body.card || {})}\nRecall question: ${String(body.question || "")}\nLearner answer: ${String(body.answer || "")}` }];
-    }
     if (!messages.length) return json({ error: "請輸入內容後再試。" }, 400);
 
     let lastError: unknown;

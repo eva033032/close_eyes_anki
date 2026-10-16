@@ -5,7 +5,6 @@
   state.speakingKeys = { groq: [''] };
   state.speakingKeysLoaded = false;
   state.speakingBusy = false;
-  state.speakingReview = null;
   state.speakingRecorder = null;
   let speakingSpeechRunId = 0;
 
@@ -179,10 +178,9 @@
     host.innerHTML = data.messages.length ? data.messages.map(message => {
       if (message.role === 'user') return `<article class="speaking-user-message"><span>You</span><p>${escapeHtml(message.content || '')}</p></article>`;
       const original = data.messages.find(item => item.id === message.replyTo)?.content || '';
-      return `<article class="speaking-teacher-message" data-speaking-message="${escapeHtml(message.id)}"><div class="speaking-teacher-label"><span class="speaking-teacher-avatar">✳</span><strong>English teacher</strong></div><div class="speaking-correction-label">NATIVE CORRECTION</div><p class="speaking-correction">${highlightCorrection(original, message.correction || '')}</p>${message.note ? `<p class="speaking-note">${escapeHtml(message.note)}</p>` : ''}<div class="speaking-follow-up"><span>LET'S KEEP TALKING</span><p>${escapeHtml(message.question || '')}</p></div><div class="speaking-message-actions"><button type="button" class="text-link" data-save-correction="${escapeHtml(message.id)}">+ ${data.cards?.some(card => normalized(card.text) === normalized(message.correction)) ? '已加入 Anki' : '加入 Anki'}</button><button type="button" class="text-link" data-save-selection="${escapeHtml(message.id)}">&#23559;&#36984;&#21462;&#35422;&#21477;&#21152;&#20837; Anki</button><button type="button" class="text-link" data-review-correction="${escapeHtml(message.id)}">複習這句</button></div></article>`;
+      return `<article class="speaking-teacher-message" data-speaking-message="${escapeHtml(message.id)}"><div class="speaking-teacher-label"><span class="speaking-teacher-avatar">✳</span><strong>English teacher</strong></div><div class="speaking-correction-label">NATIVE CORRECTION</div><p class="speaking-correction">${highlightCorrection(original, message.correction || '')}</p>${message.note ? `<p class="speaking-note">${escapeHtml(message.note)}</p>` : ''}<div class="speaking-follow-up"><span>LET'S KEEP TALKING</span><p>${escapeHtml(message.question || '')}</p></div><div class="speaking-message-actions"><button type="button" class="text-link" data-save-correction="${escapeHtml(message.id)}">+ ${data.cards?.some(card => normalized(card.text) === normalized(message.correction)) ? '已加入 Anki' : '加入 Anki'}</button><button type="button" class="text-link" data-save-selection="${escapeHtml(message.id)}">&#23559;&#36984;&#21462;&#35422;&#21477;&#21152;&#20837; Anki</button></div></article>`;
     }).join('') : '<div class="speaking-welcome"><span>✳</span><p>Hi, I\'m your English teacher. Tell me anything about your day, and I\'ll help you say it naturally.</p><small>Try a sentence in English to begin.</small></div>';
     host.querySelectorAll('[data-save-correction]').forEach(button => button.addEventListener('click', () => saveCorrection(button.dataset.saveCorrection)));
-    host.querySelectorAll('[data-review-correction]').forEach(button => button.addEventListener('click', () => reviewCorrection(button.dataset.reviewCorrection)));
     host.querySelectorAll('[data-save-selection]').forEach(button => {
       button.addEventListener('mousedown', event => event.preventDefault());
       button.addEventListener('click', () => {
@@ -194,7 +192,7 @@
       });
     });
     const latest = [...data.messages].reverse().find(message => message.role === 'assistant');
-    $('speakingFollowActions').classList.toggle('hidden', !latest || Boolean(state.speakingReview));
+    $('speakingFollowActions').classList.toggle('hidden', !latest);
   }
   function renderGrammarPrompt() {
     let host = $('speakingGrammarPrompt');
@@ -216,47 +214,47 @@
       speakingData().pendingGrammar = null; saveData(); renderSpeaking();
     });
   }
-  function renderReviewPanel() {
-    const host = $('speakingReviewPanel'), review = state.speakingReview;
-    host.classList.toggle('hidden', !review);
-    if (!review) { host.innerHTML = ''; return; }
-    if (review.complete) {
-      host.innerHTML = `<div class="speaking-review-heading"><span>SPACED REVIEW</span><h2>Review complete</h2></div><p>${escapeHtml(review.feedback || 'Great work. Your next review times are updated.')}</p><button type="button" class="secondary-button" id="closeSpeakingReview">Continue chatting</button>`;
-      $('closeSpeakingReview').addEventListener('click', () => { state.speakingReview = null; renderSpeaking(); }); return;
-    }
-    const card = review.queue[review.index];
-    if (!card) { state.speakingReview = { complete: true, feedback: '今天的到期複習完成了，做得很好！' }; renderReviewPanel(); return; }
-    const phaseText = review.phase === 'need-key' ? '&#35531;&#22635;&#20837; API key &#24460;&#65292;&#25105;&#20497;&#23601;&#38283;&#22987;&#35079;&#32722;&#12290;'
-      : review.phase === 'loading' ? '&#25945;&#24107;&#27491;&#22312;&#20986;&#38988;&#8230;'
-      : review.phase === 'grading' ? '&#27491;&#22312;&#30475;&#20320;&#30340;&#22238;&#31572;&#8230;'
-      : review.phase === 'feedback' ? escapeHtml(review.feedback || '')
-      : escapeHtml(review.question || '');
-    host.innerHTML = `<div class="speaking-review-heading"><span>SPACED REVIEW · ${review.index + 1} / ${review.queue.length}</span><h2>Let’s review what you’ve learned.</h2></div><p class="speaking-review-question">${phaseText}</p>${review.phase === 'answer' ? `<div class="speaking-review-answer-row"><input id="speakingReviewAnswer" class="text-input" type="text" placeholder="Answer in English"><button id="submitSpeakingReview" class="primary-button" type="button">Submit</button></div>` : ''}${review.phase === 'feedback' ? `<p class="speaking-review-target">${escapeHtml(review.correctedAnswer || '')}</p><button type="button" class="primary-button" id="nextSpeakingReview">${review.index + 1 < review.queue.length ? 'Next card' : 'Finish review'}</button>` : ''}<button type="button" class="review-close-link" id="stopSpeakingReview">Close review</button>`;
-    $('stopSpeakingReview').addEventListener('click', () => { state.speakingReview = null; renderSpeaking(); });
-    if (review.phase === 'answer') {
-      $('submitSpeakingReview').addEventListener('click', submitReviewAnswer);
-      $('speakingReviewAnswer').addEventListener('keydown', event => { if (event.key === 'Enter') submitReviewAnswer(); });
-    }
-    if (review.phase === 'feedback') $('nextSpeakingReview').addEventListener('click', nextReviewCard);
-  }
   function renderSavedCards() {
     const cards = speakingData().cards.slice().sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
-    $('speakingSavedCards').innerHTML = cards.length ? cards.map(card => `<article class="speaking-saved-card"><div><span>${escapeHtml(({sentence:'SENTENCE',phrase:'PHRASE',word:'WORD',grammar:'GRAMMAR'})[card.type] || 'CARD')}</span><strong>${escapeHtml(card.text)}</strong>${card.meaning ? `<small>${escapeHtml(card.meaning)}</small>` : ''}</div><div><button type="button" class="text-link" data-review-card="${escapeHtml(card.id)}">Review</button><button type="button" class="text-link speaking-remove-card" data-remove-card="${escapeHtml(card.id)}" aria-label="Remove card">×</button></div></article>`).join('') : '<p class="speaking-no-cards">No speaking cards yet. Save a correction, word, or phrase to start a review deck.</p>';
-    $('speakingSavedCards').querySelectorAll('[data-review-card]').forEach(button => button.addEventListener('click', () => startSpeakingReview(button.dataset.reviewCard)));
-    $('speakingSavedCards').querySelectorAll('[data-remove-card]').forEach(button => button.addEventListener('click', () => {
+    const host = $('speakingSavedCards');
+    host.innerHTML = cards.length ? cards.map(card => {
+      const dueLabel = (card.dueAt || 0) <= Date.now() ? '\u5f85\u8907\u7fd2' : '\u4e0b\u6b21\u8907\u7fd2 ' + new Date(card.dueAt).toLocaleDateString('zh-TW');
+      return `<article class="speaking-saved-card"><div><span>${escapeHtml(({sentence:'SENTENCE',phrase:'PHRASE',word:'WORD',grammar:'GRAMMAR'})[card.type] || 'CARD')} &middot; ${dueLabel}</span><strong>${escapeHtml(card.text)}</strong>${card.meaning ? `<small>${escapeHtml(card.meaning)}</small>` : ''}</div><button type="button" class="text-link speaking-remove-card" data-remove-card="${escapeHtml(card.id)}" aria-label="Remove card">&#215;</button></article>`;
+    }).join('') : '<p class="speaking-no-cards">No speaking cards yet. Save a correction, word, or phrase to start a review deck.</p>';
+    host.querySelectorAll('[data-remove-card]').forEach(button => button.addEventListener('click', () => {
       if (!signedIn()) return;
       speakingData().cards = speakingData().cards.filter(card => card.id !== button.dataset.removeCard);
-      saveData(); renderSpeaking();
+      saveData(); render();
+    }));
+  }
+  function renderSavedSpeakingCards() {
+    const deck = $('speakingSavedDeck'), host = $('speakingSavedLibraryList');
+    if (!deck || !host) return;
+    const cards = speakingData().cards.slice().sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
+    deck.classList.toggle('hidden', !cards.length);
+    const totalCards = cards.length, dueCards = cards.filter(card => (card.dueAt || 0) <= Date.now()).length;
+    $('savedSummary').textContent = state.data.saved.length + ' \u53e5\u6536\u85cf \u00b7 ' + totalCards + ' \u5f35\u53e3\u8aaa\u5361';
+    $('emptySaved').classList.toggle('hidden', state.data.saved.length + totalCards > 0);
+    $('savedCount').textContent = state.data.saved.length + totalCards;
+    $('dueCount').textContent = state.data.saved.filter(item => (item.dueAt || 0) <= Date.now()).length + dueCards;
+    host.innerHTML = cards.map(card => {
+      const dueLabel = (card.dueAt || 0) <= Date.now() ? '\u5f85\u8907\u7fd2' : '\u4e0b\u6b21\u8907\u7fd2 ' + new Date(card.dueAt).toLocaleDateString('zh-TW');
+      const types = {sentence:'\u53e5\u5b50',phrase:'\u7247\u8a9e',word:'\u55ae\u5b57',grammar:'\u6587\u6cd5'};
+      return `<article class="speaking-library-card"><div><span>${escapeHtml(types[card.type] || '\u53e3\u8aaa\u5361')} &middot; ${dueLabel}</span><strong>${escapeHtml(card.text)}</strong>${card.meaning ? `<small>${escapeHtml(card.meaning)}</small>` : card.context ? `<small>${escapeHtml(card.context)}</small>` : ''}</div><button type="button" class="text-link speaking-remove-card" data-remove-library-card="${escapeHtml(card.id)}">\u522a\u9664</button></article>`;
+    }).join('');
+    host.querySelectorAll('[data-remove-library-card]').forEach(button => button.addEventListener('click', () => {
+      if (!signedIn()) return;
+      speakingData().cards = speakingData().cards.filter(card => card.id !== button.dataset.removeLibraryCard);
+      saveData(); render();
     }));
   }
   function renderSpeaking() {
-    renderMessages(); renderGrammarPrompt(); renderReviewPanel(); renderSavedCards();
+    renderMessages(); renderGrammarPrompt(); renderSavedCards(); renderSavedSpeakingCards();
     $('speakingAutoSpeak').checked = speakingData().autoSpeak;
     $('speakingCorrectionRepeats').value = String(speakingData().correctionSpeakCount);
     $('speakingStatus').textContent = state.speakingStatus || '';
     $('speakingStatus').classList.toggle('is-error', Boolean(state.speakingError));
-    $('speakingComposer').classList.toggle('hidden', Boolean(state.speakingReview));
-    $('speakingFollowActions').classList.toggle('hidden', state.speakingBusy || Boolean(state.speakingReview) || ![...speakingData().messages].reverse().some(message => message.role === 'assistant'));
+    $('speakingFollowActions').classList.toggle('hidden', state.speakingBusy || ![...speakingData().messages].reverse().some(message => message.role === 'assistant'));
   }
   function updateGrammarIssue(issue) {
     if (!issue || !issue.pattern) return;
@@ -300,71 +298,6 @@
     const message = speakingData().messages.find(item => item.id === messageId && item.role === 'assistant');
     const source = message && speakingData().messages.find(item => item.id === message.replyTo);
     if (message && addCard({ type: 'sentence', text: message.correction, meaning: message.note, context: source?.content || '' })) renderSpeaking();
-  }
-  function reviewCorrection(messageId) {
-    const message = speakingData().messages.find(item => item.id === messageId && item.role === 'assistant');
-    const source = message && speakingData().messages.find(item => item.id === message.replyTo);
-    if (!message) return;
-    const existing = speakingData().cards.find(card => normalized(card.text) === normalized(message.correction));
-    const card = existing || { id: 'preview-' + message.id, type: 'sentence', text: message.correction, meaning: message.note, context: source?.content || '', temporary: true };
-    startSpeakingReview(card.id, card);
-  }
-  async function startSpeakingReview(cardId = '', customCard = null) {
-    if (!signedIn()) return;
-    const cards = speakingData().cards;
-    let queue = customCard ? [customCard] : cardId ? cards.filter(card => card.id === cardId) : cards.filter(card => (card.dueAt || 0) <= Date.now()).sort((a, b) => a.dueAt - b.dueAt);
-    if (!queue.length) { state.speakingReview = null; state.speakingStatus = '我們來複習吧！今天沒有到期的口說卡，先聊聊英文也可以。'; state.speakingError = false; renderSpeaking(); return; }
-    state.speakingReview = { queue: queue.map(card => ({ ...card })), index: 0, phase: getKeys(activeProvider()).length ? 'loading' : 'need-key', question: '', feedback: '' };
-    state.speakingStatus = ''; renderSpeaking();
-    await maybeGenerateReviewQuestion();
-  }
-  async function maybeGenerateReviewQuestion() {
-    const review = state.speakingReview;
-    if (!review || !['need-key', 'loading'].includes(review.phase) || !getKeys(activeProvider()).length || state.speakingBusy) return;
-    review.phase = 'loading'; state.speakingBusy = true; state.speakingStatus = 'Your teacher is preparing a recall question…'; renderSpeaking();
-    try {
-      const card = review.queue[review.index];
-      const response = await callAI('review-question', { card });
-      review.question = String(response.result?.question || '請用英文說出這張卡的內容。'); review.phase = 'answer'; state.speakingStatus = '';
-    } catch (error) { review.phase = 'need-key'; state.speakingStatus = error.message; state.speakingError = true; }
-    finally { state.speakingBusy = false; renderSpeaking(); $('speakingReviewAnswer')?.focus(); }
-  }
-  function setReviewSchedule(card, grade) {
-    if (!card || card.temporary) return;
-    const stored = speakingData().cards.find(item => item.id === card.id);
-    if (!stored) return;
-    const now = Date.now(), previous = stored.intervalDays || 0, reps = stored.repetitions || 0;
-    let days;
-    if (grade <= 0) { days = 10 / 1440; stored.repetitions = 0; }
-    else if (grade === 1) { days = 1; stored.repetitions = reps + 1; }
-    else if (grade === 2) { days = reps === 0 ? 1 : reps === 1 ? 3 : Math.max(3, previous * 2); stored.repetitions = reps + 1; }
-    else { days = reps === 0 ? 4 : Math.max(4, previous * 2.5); stored.repetitions = reps + 1; }
-    stored.intervalDays = days; stored.dueAt = now + days * 86400000; stored.lastReviewedAt = now; stored.lastGrade = grade;
-  }
-  async function submitReviewAnswer() {
-    const review = state.speakingReview, input = $('speakingReviewAnswer');
-    if (!review || review.phase !== 'answer' || state.speakingBusy || !input?.value.trim()) return;
-    if (!signedIn()) return;
-    const answer = input.value.trim(), card = review.queue[review.index];
-    review.answer = answer; review.phase = 'grading'; state.speakingBusy = true; renderSpeaking();
-    try {
-      const response = await callAI('review-grade', { card, question: review.question, answer });
-      const result = response.result || {}, grade = Math.max(0, Math.min(3, Number(result.grade) || 0));
-      setReviewSchedule(card, grade); saveData();
-      review.phase = 'feedback'; review.feedback = String(result.feedback || '回答已記錄，複習時間已安排。'); review.correctedAnswer = String(result.correctedAnswer || card.text);
-      state.speakingStatus = '';
-    } catch (error) { review.phase = 'answer'; state.speakingStatus = error.message; state.speakingError = true; }
-    finally { state.speakingBusy = false; renderSpeaking(); }
-  }
-  async function nextReviewCard() {
-    const review = state.speakingReview;
-    if (!review) return;
-    review.index += 1;
-    if (review.index >= review.queue.length) {
-      state.speakingReview = { complete: true, feedback: '本輪複習完成！下次複習時間已自動安排。' }; renderSpeaking(); return;
-    }
-    review.phase = getKeys(activeProvider()).length ? 'loading' : 'need-key'; review.question = ''; review.feedback = ''; renderSpeaking();
-    await maybeGenerateReviewQuestion();
   }
   async function transcribeRecording(blob) {
     const keys = getKeys('groq');
@@ -433,14 +366,13 @@
     }));
     $('saveSpeakingKeys')?.addEventListener('click', saveSpeakingKeys);
     $('clearSpeakingKeys')?.addEventListener('click', clearSpeakingKeys);
-    $('sendSpeaking').addEventListener('click', () => state.speakingReview ? submitReviewAnswer() : sendConversation());
+    $('sendSpeaking').addEventListener('click', sendConversation);
     $('speakingAutoSpeak').addEventListener('change', event => { speakingData().autoSpeak = event.currentTarget.checked; if (!event.currentTarget.checked) { speakingSpeechRunId += 1; window.speechSynthesis?.cancel(); } saveData(); });
     $('speakingCorrectionRepeats').addEventListener('change', event => { speakingData().correctionSpeakCount = Math.max(1, Math.min(5, Number(event.currentTarget.value) || 2)); saveData(); });
     $('speakingInput').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendConversation(); } });
     $('speakingMic').addEventListener('click', toggleRecording);
-    $('newSpeakingChat').addEventListener('click', () => { if (!signedIn() || !window.confirm('\u958b\u59cb\u65b0\u5c0d\u8a71\u6703\u6e05\u9664\u76ee\u524d\u5c0d\u8a71\u6b77\u53f2\uff0c\u5df2\u5b58\u5165 Anki \u7684\u5361\u7247\u6703\u4fdd\u7559\u3002\u7e7c\u7e8c\u55ce\uff1f')) return; speakingData().messages = []; state.speakingReview = null; state.speakingStatus = ''; saveData(); renderSpeaking(); });
+    $('newSpeakingChat').addEventListener('click', () => { if (!signedIn() || !window.confirm('\u958b\u59cb\u65b0\u5c0d\u8a71\u6703\u6e05\u9664\u76ee\u524d\u5c0d\u8a71\u6b77\u53f2\uff0c\u5df2\u5b58\u5165 Anki \u7684\u5361\u7247\u6703\u4fdd\u7559\u3002\u7e7c\u7e8c\u55ce\uff1f')) return; speakingData().messages = []; state.speakingStatus = ''; saveData(); renderSpeaking(); });
     $('continueSpeaking').addEventListener('click', () => $('speakingInput').focus());
-    $('reviewCurrentCorrection').addEventListener('click', () => { const message = [...speakingData().messages].reverse().find(item => item.role === 'assistant'); if (message) reviewCorrection(message.id); });
     $('saveCurrentCorrection').addEventListener('click', () => { const message = [...speakingData().messages].reverse().find(item => item.role === 'assistant'); if (message) saveCorrection(message.id); });
     $('addSpeakingCard').addEventListener('click', () => {
       const added = addCard({ type: $('speakingCardType').value, text: $('speakingCardText').value, meaning: $('speakingCardMeaning').value });
@@ -455,9 +387,15 @@
       $('pageTitle').textContent = '英文口說練習';
       renderSpeaking();
       loadSpeakingKeys();
-      if (!state.speakingReview && speakingData().cards.some(card => (card.dueAt || 0) <= Date.now())) startSpeakingReview();
-      else if (!speakingData().cards.some(card => (card.dueAt || 0) <= Date.now())) { state.speakingStatus = '我們來複習吧！今天沒有到期的口說卡，來聊聊英文也可以。'; renderSpeaking(); }
     }
+  };
+  const originalRenderSaved = renderSaved;
+  renderSaved = function() {
+    originalRenderSaved();
+    const count = speakingData().cards.length;
+    $('savedSummary').textContent = state.data.saved.length + ' \u53e5\u6536\u85cf \u00b7 ' + count + ' \u5f35\u53e3\u8aaa\u5361';
+    $('emptySaved').classList.toggle('hidden', state.data.saved.length + count > 0);
+    renderSavedSpeakingCards();
   };
   const originalRender = render;
   render = function() { originalRender(); if (state.view === 'speaking') renderSpeaking(); };
