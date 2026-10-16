@@ -124,6 +124,21 @@ async function askGemini(key: string, prompt: string, messages: Array<{role:stri
   return parseJson(text);
 }
 
+function groqRateLimits(headers: Headers) {
+  const names: Record<string, string> = {
+    remainingRequests: "x-ratelimit-remaining-requests",
+    limitRequests: "x-ratelimit-limit-requests",
+    resetRequests: "x-ratelimit-reset-requests",
+    remainingTokens: "x-ratelimit-remaining-tokens",
+    limitTokens: "x-ratelimit-limit-tokens",
+    resetTokens: "x-ratelimit-reset-tokens",
+  };
+  return Object.fromEntries(Object.entries(names).flatMap(([key, header]) => {
+    const value = headers.get(header);
+    return value === null ? [] : [[key, value]];
+  }));
+}
+
 async function askGroq(key: string, prompt: string, messages: Array<{role:string;content:string}>) {
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -140,7 +155,7 @@ async function askGroq(key: string, prompt: string, messages: Array<{role:string
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body?.error?.message || `Groq API 回應 ${response.status}`);
   const text = body?.choices?.[0]?.message?.content || "";
-  return parseJson(text);
+  return { ...parseJson(text), rateLimits: groqRateLimits(response.headers) };
 }
 
 async function transcribeGroq(key: string, audioBase64: string, mimeType: string) {

@@ -102,12 +102,27 @@
     } catch (error) { setKeyStatus(error.message || '清除失敗。', true); }
   }
   function activeProvider() { return 'groq'; }
+  function updateGroqQuota(limits) {
+    if (!limits) return;
+    const parts = [];
+    if (limits.remainingRequests != null) {
+      const reset = limits.resetRequests ? ` (重置倒數 ${limits.resetRequests})` : '';
+      parts.push(`每日剩餘請求 ${limits.remainingRequests}${limits.limitRequests != null ? `/${limits.limitRequests}` : ''}${reset}`);
+    }
+    if (limits.remainingTokens != null) {
+      const reset = limits.resetTokens ? ` (重置倒數 ${limits.resetTokens})` : '';
+      parts.push(`本分鐘剩餘 tokens ${limits.remainingTokens}${limits.limitTokens != null ? `/${limits.limitTokens}` : ''}${reset}`);
+    }
+    if (parts.length) $('groqQuotaStatus').textContent = `Groq 額度：${parts.join(' · ')}`;
+  }
   async function callAI(action, fields = {}, forcedProvider = null) {
     const provider = forcedProvider || activeProvider();
     const keys = getKeys(provider);
     if (!keys.length) throw new Error('請先輸入 Groq API key。');
     if (!window.callSpeakingAI) throw new Error('Speaking AI 服務尚未部署，請先部署 Supabase speaking-ai Edge Function。');
-    return window.callSpeakingAI({ action, provider, keys, ...fields });
+    const response = await window.callSpeakingAI({ action, provider, keys, ...fields });
+    if (provider === 'groq') updateGroqQuota(response.result?.rateLimits);
+    return response;
   }
   function conversationHistory(messages) {
     return messages.slice(-22).map(message => message.role === 'assistant'
