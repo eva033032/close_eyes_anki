@@ -2,7 +2,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const id = () => crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random();
-  state.speakingKeys = { gemini: [''], groq: [''] };
+  state.speakingKeys = { groq: [''] };
   state.speakingKeysLoaded = false;
   state.speakingBusy = false;
   state.speakingReview = null;
@@ -40,7 +40,7 @@
       input.autocomplete = 'off';
       input.spellcheck = false;
       input.className = 'text-input';
-      input.placeholder = provider === 'gemini' ? 'Gemini API key' : 'Groq API key';
+      input.placeholder = 'Groq API key';
       input.setAttribute('aria-label', provider + ' API key ' + (index + 1));
       input.dataset.keyProvider = provider;
       input.value = value;
@@ -67,23 +67,21 @@
     setKeyStatus('正在從 Supabase 載入…');
     try {
       const response = await window.manageSpeakingKeys('get-keys');
-      for (const provider of ['gemini', 'groq']) {
-        const values = response?.keys?.[provider];
-        state.speakingKeys[provider] = Array.isArray(values) && values.length ? values.slice(0, 5) : [''];
-        renderKeyInputs(provider);
-      }
+      const groqKeys = response?.keys?.groq;
+      state.speakingKeys.groq = Array.isArray(groqKeys) && groqKeys.length ? groqKeys.slice(0, 5) : [''];
+      renderKeyInputs('groq');
       state.speakingKeysLoaded = true;
       state.speakingKeysUserId = window.currentSupabaseUserId;
-      const hasSavedKeys = ['gemini', 'groq'].some(provider => state.speakingKeys[provider].some(key => key.trim()));
-      setKeyStatus(hasSavedKeys ? '已載入此帳戶儲存的 API keys。' : '此帳戶尚未儲存 API 金鑰。');
+      const hasSavedKeys = state.speakingKeys.groq.some(key => key.trim());
+      setKeyStatus(hasSavedKeys ? 'Groq API key \u5df2\u5f9e\u96f2\u7aef\u8f09\u5165\u3002' : '\u6b64\u5e33\u6236\u5c1a\u672a\u5132\u5b58 API \u91d1\u9470\u3002');
     } catch (error) {
       setKeyStatus(error.message || '雲端 keys 載入失敗。', true);
     }
   }
   async function saveSpeakingKeys() {
     if (!signedIn()) return;
-    const keys = { gemini: getKeys('gemini'), groq: getKeys('groq') };
-    if (!keys.gemini.length && !keys.groq.length) { setKeyStatus('請至少填入一組 Gemini 或 Groq key。', true); return; }
+    const keys = { gemini: [], groq: getKeys('groq') };
+    if (!keys.groq.length) { setKeyStatus('請先輸入 Groq API key。', true); return; }
     setKeyStatus('正在加密並儲存…');
     try {
       await window.manageSpeakingKeys('save-keys', keys);
@@ -97,17 +95,17 @@
     setKeyStatus('正在清除…');
     try {
       await window.manageSpeakingKeys('clear-keys');
-      state.speakingKeys = { gemini: [''], groq: [''] };
+      state.speakingKeys = { groq: [''] };
       state.speakingKeysLoaded = true;
-      renderKeyInputs('gemini'); renderKeyInputs('groq');
+      renderKeyInputs('groq');
       setKeyStatus('雲端 API keys 已清除。');
     } catch (error) { setKeyStatus(error.message || '清除失敗。', true); }
   }
-  function activeProvider() { return $('speakingProvider').value; }
+  function activeProvider() { return 'groq'; }
   async function callAI(action, fields = {}, forcedProvider = null) {
     const provider = forcedProvider || activeProvider();
     const keys = getKeys(provider);
-    if (!keys.length) throw new Error(`請先輸入 ${provider === 'gemini' ? 'Gemini' : 'Groq'} API key。`);
+    if (!keys.length) throw new Error('請先輸入 Groq API key。');
     if (!window.callSpeakingAI) throw new Error('Speaking AI 服務尚未部署，請先部署 Supabase speaking-ai Edge Function。');
     return window.callSpeakingAI({ action, provider, keys, ...fields });
   }
@@ -353,14 +351,21 @@
     } catch (error) { state.speakingStatus = error.message || '無法使用麥克風。'; state.speakingError = true; renderSpeaking(); }
   }
   function setup() {
-    renderKeyInputs('gemini'); renderKeyInputs('groq');
+    renderKeyInputs('groq');
+    $('toggleSpeakingSettings')?.addEventListener('click', event => {
+      const content = $('speakingSettingsContent');
+      const expanded = event.currentTarget.getAttribute('aria-expanded') === 'true';
+      event.currentTarget.setAttribute('aria-expanded', String(!expanded));
+      content.classList.toggle('hidden', expanded);
+      event.currentTarget.textContent = expanded ? '\u5c55\u958b \u2193' : '\u6536\u5408 \u2191';
+    });
     window.addEventListener('supabase-user-changed', event => {
       const nextUserId = event.detail?.userId || null;
       if (state.speakingKeysUserId && state.speakingKeysUserId !== nextUserId) {
-        state.speakingKeys = { gemini: [''], groq: [''] };
+        state.speakingKeys = { groq: [''] };
         state.speakingKeysLoaded = false;
         state.speakingKeysUserId = null;
-        renderKeyInputs('gemini'); renderKeyInputs('groq');
+        renderKeyInputs('groq');
         setKeyStatus('帳戶已切換，請載入該帳戶的 keys。');
       }
       if (nextUserId && state.view === 'speaking') loadSpeakingKeys();
@@ -371,7 +376,6 @@
       state.speakingKeys[provider].push(''); renderKeyInputs(provider);
       document.querySelectorAll(`[data-key-provider="${provider}"]`).at(-1)?.focus();
     }));
-    $('speakingProvider').addEventListener('change', maybeGenerateReviewQuestion);
     $('saveSpeakingKeys')?.addEventListener('click', saveSpeakingKeys);
     $('clearSpeakingKeys')?.addEventListener('click', clearSpeakingKeys);
     $('sendSpeaking').addEventListener('click', () => state.speakingReview ? submitReviewAnswer() : sendConversation());

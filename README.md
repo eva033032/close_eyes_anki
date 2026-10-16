@@ -22,7 +22,7 @@ The browser uses the Supabase project URL and publishable key in `cloud-sync.js`
 
 ## Speaking practice
 
-The Speaking page supports Gemini or Groq for conversation and Groq Whisper for English speech transcription. Users enter their own API keys and explicitly save them to Supabase from the page. The Edge Function encrypts the keys with AES-GCM before storing them in `user_ai_keys`; only the signed-in account can retrieve its keys through the function. The encryption secret must be configured separately and never committed. Speaking messages, saved vocabulary/phrases/sentences, review schedules, and recurring grammar patterns sync through `user_learning_data`.
+The Speaking page uses Groq for conversation and Groq Whisper for English speech transcription. Users enter their Groq API key and explicitly save it to Supabase from the page. The Edge Function encrypts keys with AES-GCM before storing them in `user_ai_keys`; only the signed-in account can retrieve its keys through the function. The encryption secret must be configured separately and never committed. Speaking messages, saved vocabulary/phrases/sentences, review schedules, and recurring grammar patterns sync through `user_learning_data`.
 
 Deploy the Edge Function once from this folder:
 
@@ -44,7 +44,7 @@ Deploy the Edge Function once from this folder:
 
 Run these CLI commands in the current terminal with the working directory set to this project (`D:\Self_App\close_eyes_anki`). After deployment and the SQL update, sign into the app, enter keys on the Speaking page, and select **Save API keys to Supabase**. Other devices can then retrieve them after signing into that same account. If you later rotate the encryption secret, previously saved keys cannot be decrypted; clear and save them again with the new secret.
 
-Gemini and Groq have their own API key and free-tier limits. The Speaking page shows the required-key notice and key entry fields.
+Groq has its own API key and free-tier limits. The Speaking page shows the required-key notice and a collapsible API key settings panel.
 
 ## Deploy to Vercel
 

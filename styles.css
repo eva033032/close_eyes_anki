@@ -23,3 +23,4 @@
 
 .folder-create-panel{display:flex;align-items:center;gap:8px;margin:12px 0}.folder-create-panel input{max-width:300px}.folder-create-panel .primary-button,.folder-create-panel .secondary-button{padding:9px 14px}
 .speaking-key-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px}.speaking-key-actions span{font-size:10px;color:#6f7a69}.speaking-key-actions span.error{color:#ae5946}
+.speaking-key-columns{grid-template-columns:minmax(0,1fr)}.speaking-settings-toggle{white-space:nowrap;font-size:10px;padding:8px 12px}
