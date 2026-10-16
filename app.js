@@ -1,22 +1,20 @@
-const STORAGE_KEY='close-eyes-v1';
-const state={data:loadData(),view:'home',activeArticleId:null,sentenceIndex:0,repeatCount:1,playing:false,repeatDone:0,reviewQueue:[],reviewIndex:0,reviewMode:'saved',toastTimer:null,currentSource:'text',fileText:'',filePairs:null};
+const state={data:emptyLearningData(),view:'home',activeArticleId:null,sentenceIndex:0,repeatCount:1,playing:false,repeatDone:0,reviewQueue:[],reviewIndex:0,reviewMode:'saved',toastTimer:null,currentSource:'text',fileText:'',filePairs:null};
 const $=id=>document.getElementById(id);const $$=selector=>[...document.querySelectorAll(selector)];
-function loadData(){try{const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY));if(parsed&&Array.isArray(parsed.articles)){parsed.saved=Array.isArray(parsed.saved)?parsed.saved:[];parsed.articles=parsed.articles.map(article=>{const sentences=Array.isArray(article.sentences)?article.sentences:[];return{...article,sentences:sentences.length?sentences:splitSentences(article.sourceText||'').map(english=>({english,chinese:''}))}});return parsed}}catch(e){}return{articles:[],saved:[],lastSession:null,review:{},listeningSeconds:0,dayStamp:'',streak:0,lastStudyDay:''}}
-function saveData(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state.data))}
+function emptyLearningData(){return{articles:[],folders:[],saved:[],lastSession:null,review:{},listeningSeconds:0,dayStamp:'',streak:0,lastStudyDay:''}}
+function saveData(){if(typeof window.saveLearningData==='function')window.saveLearningData(state.data)}
 function todayKey(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date())}
 function todayLabel(){return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'long',day:'numeric',weekday:'long'}).format(new Date())}
 function escapeHtml(value=''){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function activeArticle(){return state.data.articles.find(a=>a.id===state.activeArticleId)}
 function sentenceKey(articleId,index){return `${articleId}:${index}`}
 function splitSentences(text){return(text.replace(/\s+/g,' ').match(/[^.!?]+(?:[.!?]+["')\]]*)?|[^.!?]+$/g)||[]).map(s=>s.trim()).filter(s=>s.length>1)}
-function setView(view){stopPlayback();state.view=view;$$('.view').forEach(v=>v.classList.remove('active'));const target=$(`${view}View`);if(target)target.classList.add('active');$$('.nav-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view||view==='player'&&btn.dataset.view==='library'));$('pageTitle').textContent=({home:'今日學習',library:'我的文章',player:'聆聽練習',saved:'收藏句子',review:'間隔複習'})[view]||'今日學習';render();window.scrollTo({top:0,behavior:'smooth'})}
+function setView(view){stopPlayback();state.view=view;$$('.view').forEach(v=>v.classList.remove('active'));const target=$(`${view}View`);if(target)target.classList.add('active');$$('.nav-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view||view==='player'&&btn.dataset.view==='library'));$('pageTitle').textContent=({home:'今日學習',library:'我的文章',player:'聆聽練習',saved:'收藏句子',review:'間隔複習'})[view]||'今日學習';if(view==='shared')$('pageTitle').textContent='\u516c\u958b\u5206\u4eab';render();if(view==='shared')loadSharedLibrary();window.scrollTo({top:0,behavior:'smooth'})}
 function showToast(message){const toast=$('toast');toast.textContent=message;toast.classList.add('show');clearTimeout(state.toastTimer);state.toastTimer=setTimeout(()=>toast.classList.remove('show'),2400)}
 function openImport(source='text'){state.currentSource=source;state.fileText='';state.filePairs=null;$('articleTitle').value='';$('articleText').value='';$('importError').textContent='';switchSource(source);$('importModal').classList.remove('hidden');setTimeout(()=>$('articleTitle').focus(),30)}
 function closeImport(){$('importModal').classList.add('hidden')}
 function switchSource(source){state.currentSource=source;$$('.source-tab').forEach(t=>t.classList.toggle('active',t.dataset.source===source));$('textSource').classList.toggle('hidden',source!=='text');$('fileSource').classList.toggle('hidden',source!=='file')}
-function render(){renderHome();renderLibrary();renderSaved();renderReview();if(state.view==='player')renderPlayer();$('savedCount').textContent=state.data.saved.length}
+function render(){renderHome();renderLibrary();renderSaved();renderReview();if(state.view==='player')renderPlayer();if(state.view==='shared')renderShared();$('savedCount').textContent=state.data.saved.length}
 function renderHome(){const total=state.data.articles.reduce((n,a)=>n+a.sentences.length,0);$('totalSentences').textContent=total;$('todayMinutes').textContent=Math.floor((state.data.listeningSeconds||0)/60);const due=state.data.saved.filter(item=>(item.dueAt||0)<=Date.now()).length;$('dueCount').textContent=due;$('todayDate').textContent=todayLabel();$('streakText').textContent=state.data.streak?`連續學習 ${state.data.streak} 天`:'開始你的第一天';const last=state.data.lastSession;const article=last&&state.data.articles.find(a=>a.id===last.articleId)||state.data.articles[0];const container=$('continueCard');if(!article){container.innerHTML='<div class="empty-continue"><span>✧</span><div>還沒有開始練習。挑一段喜歡的英文，從第一句開始吧。</div></div>';return}const pct=Math.round((article.currentIndex/article.sentences.length)*100)||0;const label=article.title.split(/\s+/).slice(0,3).join(' ');container.innerHTML=`<div class="continue-cover"><span>LISTENING NOTES</span><strong>${escapeHtml(label)}</strong></div><div class="continue-info"><h3>${escapeHtml(article.title)}</h3><p>${article.sentences.length} 句 · 上次聽到第 ${Math.min(article.currentIndex+1,article.sentences.length)} 句</p><div class="continue-progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><span>${pct}%</span></div></div><button class="continue-button" data-resume="${article.id}">繼續聆聽 <span>→</span></button>`;container.querySelector('[data-resume]').addEventListener('click',()=>openArticle(article.id))}
-function renderLibraryBase(){const grid=$('libraryGrid');$('librarySummary').textContent=`${state.data.articles.length} 篇文章`;grid.innerHTML=state.data.articles.map(article=>{const pct=Math.round(article.currentIndex/article.sentences.length*100)||0;const label=article.title.split(/\s+/).slice(0,3).join(' ');return`<article class="library-card" data-article="${article.id}"><div class="continue-cover"><span>LISTENING NOTES</span><strong>${escapeHtml(label)}</strong></div><h3>${escapeHtml(article.title)}</h3><p>${article.sentences.length} 句 · ${new Date(article.createdAt).toLocaleDateString('zh-TW')}</p><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div class="library-card-footer"><span>已聽 ${article.currentIndex} / ${article.sentences.length} 句</span><span>${pct}%</span></div></article>`}).join('');grid.querySelectorAll('[data-article]').forEach(card=>card.addEventListener('click',()=>openArticle(card.dataset.article)));$('emptyLibrary').classList.toggle('hidden',state.data.articles.length>0)}
 function renderPlayerBase(){const article=activeArticle();if(!article)return;state.sentenceIndex=Math.min(Math.max(0,state.sentenceIndex),article.sentences.length-1);const idx=state.sentenceIndex;const sentence=article.sentences[idx];$('playerTitle').textContent=article.title;$('playerProgressLabel').textContent=`第 ${idx+1} 句，共 ${article.sentences.length} 句`;$('playerDuration').textContent=`約 ${Math.max(1,Math.ceil(article.sentences.length*8/60))} 分鐘`;$('playerProgress').style.width=`${Math.round(idx/article.sentences.length*100)}%`;$('sentenceIndex').textContent=`${String(idx+1).padStart(2,'0')} / ${String(article.sentences.length).padStart(2,'0')}`;$('sentenceEnglish').textContent=sentence.english;$('sentenceChinese').textContent=sentence.chinese||'Translation missing';$('previousSentence').disabled=idx===0;$('nextSentence').disabled=idx===article.sentences.length-1;const saved=state.data.saved.some(s=>s.articleId===article.id&&s.sentenceIndex===idx);$('bookmarkButton').classList.toggle('saved',saved);$('bookmarkButton').textContent=saved?'♥':'♡';const pct=Math.round(article.currentIndex/article.sentences.length*100)||0;$('asideProgress').textContent=`${pct}%`;$('asideProgressBar').style.width=`${pct}%`;$('asideSentences').textContent=`${article.sentences.length} 句 · 目前在第 ${idx+1} 句`;$('playGlyph').textContent=state.playing?'Ⅱ':'▶';$('playLabel').textContent=state.playing?'暫停':'播放';$$('#repeatControl button').forEach(b=>b.classList.toggle('selected',Number(b.dataset.repeat)===state.repeatCount))}
 function renderSaved(){const list=$('savedList');$('savedSummary').textContent=`${state.data.saved.length} 句收藏`;list.innerHTML=state.data.saved.map((item,i)=>{const article=state.data.articles.find(a=>a.id===item.articleId);if(!article)return'';const sentence=article.sentences[item.sentenceIndex];if(!sentence)return'';return`<article class="saved-item"><div class="saved-en">${escapeHtml(sentence.english)}</div><div class="saved-zh">${escapeHtml(sentence.chinese||'Translation missing')}</div><div class="saved-meta">${escapeHtml(article.title)} · ${item.dueAt&&item.dueAt>Date.now()?'下次複習 '+new Date(item.dueAt).toLocaleDateString('zh-TW'):'待複習'}</div><div class="saved-actions"><button class="small-icon-button" aria-label="播放句子" data-play-saved="${i}">▶</button><button class="small-icon-button" aria-label="取消收藏" data-remove-saved="${i}">♥</button></div></article>`}).join('');list.querySelectorAll('[data-play-saved]').forEach(b=>b.addEventListener('click',()=>{const item=state.data.saved[Number(b.dataset.playSaved)];openArticle(item.articleId,item.sentenceIndex)}));list.querySelectorAll('[data-remove-saved]').forEach(b=>b.addEventListener('click',()=>{state.data.saved.splice(Number(b.dataset.removeSaved),1);saveData();render()}));$('emptySaved').classList.toggle('hidden',state.data.saved.length>0)}
 function renderReviewBase(){const due=state.reviewQueue.length?state.reviewQueue:state.data.saved.filter(s=>(s.dueAt||0)<=Date.now());$('reviewEmpty').classList.toggle('hidden',due.length>0);$('reviewCard').classList.toggle('hidden',due.length===0);if(!due.length)return;state.reviewQueue=due;state.reviewIndex=Math.min(state.reviewIndex,due.length-1);const item=due[state.reviewIndex],article=state.data.articles.find(a=>a.id===item.articleId),sentence=article?.sentences[item.sentenceIndex];if(!sentence){state.reviewQueue=[];renderReview();return}$('reviewQueue').textContent=`${state.reviewIndex+1} / ${due.length}`;$('reviewEnglish').textContent=sentence.english;$('reviewChinese').textContent=sentence.chinese||'Translation missing';$('answerArea').classList.add('hidden');$('revealAnswer').classList.remove('hidden');$('reviewBookmark').classList.add('saved');$('reviewBookmark').textContent='♥'}
@@ -37,11 +35,9 @@ function articleSourceLanguage(article){return article?.sourceLanguage||'en'}
 function articleTargetLanguage(article){return article?.targetLanguage||'zh-TW'}
 function languageVoice(code){return({en:'en-US',ja:'ja-JP',ko:'ko-KR','zh-TW':'zh-TW'})[code]||'en-US'}
 function splitSentences(text){return(text.replace(/\s+/g,' ').match(/[^.!?。！？]+(?:[.!?。！？]+["')\]”’）】]*)?|[^.!?。！？]+$/gu)||[]).map(s=>s.trim()).filter(s=>s.length>1)}
-function openImport(source='text'){state.currentSource=source;state.fileText='';state.filePairs=null;state.fileText='';$('articleTitle').value='';$('articleText').value='';$('sourceLanguage').value='en';$('targetLanguage').value='zh-TW';$('fileStatus').textContent='';$('importError').textContent='';switchSource(source);$('importModal').classList.remove('hidden');setTimeout(()=>$('articleTitle').focus(),30)}
+function openImport(source='text'){state.currentSource=source;state.fileText='';state.filePairs=null;state.fileText='';$('articleTitle').value='';$('articleText').value='';$('sourceLanguage').value='en';$('targetLanguage').value='zh-TW';$('articleSourceType').value='youtube';$('articleSourceCustom').value='';$('customSourceWrap').classList.add('hidden');$('articleSourceUrl').value='';$('fileStatus').textContent='';$('importError').textContent='';switchSource(source);$('importModal').classList.remove('hidden');setTimeout(()=>$('articleTitle').focus(),30)}
 function switchSource(source){state.currentSource=source;$$('.source-tab').forEach(t=>t.classList.toggle('active',t.dataset.source===source));$('textSource').classList.toggle('hidden',source!=='text');$('fileSource').classList.toggle('hidden',source!=='file')}
-function removeArticle(articleId){const article=state.data.articles.find(item=>item.id===articleId);if(!article)return;if(!window.confirm(`確定刪除「${article.title}」及其收藏句子？`))return;state.data.articles=state.data.articles.filter(item=>item.id!==articleId);state.data.saved=state.data.saved.filter(item=>item.articleId!==articleId);if(state.data.lastSession?.articleId===articleId)state.data.lastSession=null;state.reviewQueue=state.reviewQueue.filter(item=>item.articleId!==articleId);saveData();if(state.activeArticleId===articleId){state.activeArticleId=null;stopPlayback();setView('library')}else render();showToast('文章與相關收藏已刪除')}
-const originalRenderLibrary=renderLibraryBase;
-function renderLibrary(){originalRenderLibrary();$$('.library-card[data-article]').forEach(card=>{if(card.querySelector('.delete-article'))return;const button=document.createElement('button');button.className='delete-article';button.type='button';button.title='刪除文章';button.setAttribute('aria-label','刪除文章');button.textContent='×';button.addEventListener('click',event=>{event.stopPropagation();removeArticle(card.dataset.article)});card.append(button)})}
+function removeArticle(articleId){const article=state.data.articles.find(item=>item.id===articleId);if(!article)return;const wasPublic=article.isPublic;if(!window.confirm(`確定刪除「${article.title}」及其收藏句子？`))return;state.data.articles=state.data.articles.filter(item=>item.id!==articleId);state.data.saved=state.data.saved.filter(item=>item.articleId!==articleId);if(state.data.lastSession?.articleId===articleId)state.data.lastSession=null;state.reviewQueue=state.reviewQueue.filter(item=>item.articleId!==articleId);saveData();if(wasPublic)requestPublicSync();if(state.activeArticleId===articleId){state.activeArticleId=null;stopPlayback();setView('library')}else render();showToast('文章與相關收藏已刪除')}
 const originalRenderPlayer=renderPlayerBase;
 function renderSentenceList(article){const list=$('sentenceList');if(!list)return;const sentences=Array.isArray(article.sentences)?article.sentences:[];$('sentenceListCount').textContent=`${sentences.length} 句` ;if(!sentences.length){list.innerHTML='<div class="sentence-list-empty">沒有拆出句子。請確認匯入文字後再試一次。</div>';return}list.innerHTML=sentences.map((sentence,index)=>`<button type="button" class="sentence-row${index===state.sentenceIndex?' current':''}" data-sentence-index="${index}"><span class="sentence-row-number">${String(index+1).padStart(2,'0')}</span><span class="sentence-row-copy"><span class="sentence-row-original">${escapeHtml(sentence.english||'')}</span><span class="sentence-row-translation">${escapeHtml(sentence.chinese||'翻譯處理中…')}</span></span></button>`).join('');list.querySelectorAll('[data-sentence-index]').forEach(button=>button.addEventListener('click',()=>{stopPlayback();state.sentenceIndex=Number(button.dataset.sentenceIndex);article.currentIndex=state.sentenceIndex;state.data.lastSession={articleId:article.id,sentenceIndex:state.sentenceIndex};saveData();renderPlayer()}))}
 function renderPlayer(){const article=activeArticle();if(article&&!article.sentences.length){$('playerTitle').textContent=article.title;$('sentenceEnglish').textContent='這篇文章沒有儲存到句子。請重新匯入原文。';$('sentenceChinese').textContent='';$('previousSentence').disabled=true;$('nextSentence').disabled=true;renderSentenceList(article);return}originalRenderPlayer();if(!article)return;const source=articleSourceLanguage(article),target=articleTargetLanguage(article);$('targetLanguageLabel').textContent=`${LANGUAGE_LABELS[target]}翻譯`;$('sourceLanguageName').textContent=LANGUAGE_LABELS[source];$('asideTargetLanguage').textContent=LANGUAGE_LABELS[target];const enabled=article.playTranslation!==false;$('translationToggle').textContent=`播放翻譯：${enabled?'開':'關'}`;$('translationToggle').classList.toggle('enabled',enabled);$('translationToggle').setAttribute('aria-pressed',String(enabled));$('speakEnglish').innerHTML=`🔊 <span>聽${LANGUAGE_LABELS[source]}原句</span>`;$('speakChinese').innerHTML=`◖ <span>聽${LANGUAGE_LABELS[target]}翻譯</span>`;renderSentenceList(article)}
@@ -51,7 +47,7 @@ function removeReviewBookmark(){const item=state.reviewQueue[state.reviewIndex];
 function speak(text,lang,rate=1){if(!('speechSynthesis'in window)){showToast('這個瀏覽器不支援語音播放');return}if(!lang){let article=activeArticle();if(!article&&state.view==='review'){const item=state.reviewQueue[state.reviewIndex];article=item&&state.data.articles.find(a=>a.id===item.articleId)}lang=languageVoice(articleSourceLanguage(article))}window.speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang=lang;utterance.rate=rate;window.speechSynthesis.speak(utterance)}
 function speakCurrent(which='source',rate=1){const article=activeArticle(),sentence=article?.sentences[state.sentenceIndex];if(!sentence)return;const translation=which==='translation'||which===articleTargetLanguage(article)||which==='zh-TW';const language=translation?articleTargetLanguage(article):articleSourceLanguage(article);const text=translation?(sentence.chinese||'尚無翻譯'):sentence.english;speak(text,languageVoice(language),rate)}
 function playLoop(){if(!state.playing)return;const article=activeArticle(),sentence=article?.sentences[state.sentenceIndex];if(!sentence){stopPlayback();return}const afterCycle=()=>{if(!state.playing)return;state.repeatDone++;if(state.repeatDone<state.repeatCount){setTimeout(playLoop,350);return}state.repeatDone=0;markStudy();if(state.sentenceIndex<article.sentences.length-1){state.sentenceIndex++;article.currentIndex=state.sentenceIndex;state.data.lastSession={articleId:article.id,sentenceIndex:state.sentenceIndex};saveData();renderPlayer();setTimeout(playLoop,350)}else{article.currentIndex=article.sentences.length;saveData();stopPlayback();renderPlayer();showToast('這篇文章聽完了，做得很好。')}};const original=new SpeechSynthesisUtterance(sentence.english);original.lang=languageVoice(articleSourceLanguage(article));original.onend=()=>{if(!state.playing)return;const translated=(sentence.chinese||'').trim();if(article.playTranslation!==false&&translated){const translation=new SpeechSynthesisUtterance(translated);translation.lang=languageVoice(articleTargetLanguage(article));translation.rate=.94;translation.onend=()=>setTimeout(afterCycle,220);translation.onerror=afterCycle;window.speechSynthesis.speak(translation)}else afterCycle()};original.onerror=()=>{if(state.playing){stopPlayback();showToast('原文語音播放失敗，請確認瀏覽器支援此語言')}};window.speechSynthesis.speak(original)}
-function initLanguageControls(){$('sourceFile')?.addEventListener('change',event=>extractDocument(event.target.files[0]));$('translationToggle')?.addEventListener('click',()=>{const article=activeArticle();if(!article)return;article.playTranslation=article.playTranslation===false;saveData();renderPlayer()});$('speakEnglish')?.addEventListener('click',()=>speakCurrent('source'));$('speakChinese')?.addEventListener('click',()=>speakCurrent('translation'));$('slowSpeak')?.addEventListener('click',()=>speakCurrent('source',.72));const moreButton=document.querySelector('.more-btn');moreButton?.addEventListener('click',()=>showToast('目前以本機方式保存學習資料，尚未提供帳號登入與雲端同步。'))}
+function initLanguageControls(){$('sourceFile')?.addEventListener('change',event=>extractDocument(event.target.files[0]));$('translationToggle')?.addEventListener('click',()=>{const article=activeArticle();if(!article)return;article.playTranslation=article.playTranslation===false;saveData();renderPlayer()});$('speakEnglish')?.addEventListener('click',()=>speakCurrent('source'));$('speakChinese')?.addEventListener('click',()=>speakCurrent('translation'));$('slowSpeak')?.addEventListener('click',()=>speakCurrent('source',.72));const moreButton=document.querySelector('.more-btn');moreButton?.addEventListener('click',()=>showToast('學習資料儲存在 Supabase，請使用登入中的帳號。'))}
 initLanguageControls();
 init();
 const reviewBookmark=$('reviewBookmark');if(reviewBookmark){const replacement=reviewBookmark.cloneNode(true);reviewBookmark.replaceWith(replacement);replacement.addEventListener('click',removeReviewBookmark)}
@@ -60,7 +56,7 @@ const reviewBookmark=$('reviewBookmark');if(reviewBookmark){const replacement=re
 
 function splitSentences(text){return String(text||'').replace(/\s+/g,' ').match(/[^.!?。！？]+[.!?。！？]+["'”’）)\]]*|[^.!?。！？]+$/gu)?.map(sentence=>sentence.trim()).filter(Boolean)||[]}
 
-function openImport(source='text'){state.currentSource=source;state.fileText='';state.filePairs=null;state.fileText='';state.filePairs=null;$('articleTitle').value='';$('articleText').value='';$('sourceLanguage').value='en';$('targetLanguage').value='zh-TW';$('fileStatus').textContent='';$('importError').textContent='';switchSource(source);$('importModal').classList.remove('hidden');setTimeout(()=>$('articleTitle').focus(),30)}
+function openImport(source='text'){state.currentSource=source;state.fileText='';state.filePairs=null;state.fileText='';state.filePairs=null;$('articleTitle').value='';$('articleText').value='';$('sourceLanguage').value='en';$('targetLanguage').value='zh-TW';$('articleSourceType').value='youtube';$('articleSourceCustom').value='';$('customSourceWrap').classList.add('hidden');$('articleSourceUrl').value='';$('fileStatus').textContent='';$('importError').textContent='';switchSource(source);$('importModal').classList.remove('hidden');setTimeout(()=>$('articleTitle').focus(),30)}
 function parseMarkdownSentencePairs(markdown){
   const lines=markdown.split(/\r?\n/).map(line=>line.trim().replace(/^>\s?/,'').replace(/\\+\s*$/,'').replace(/^[-*+]\s+/,'').replace(/\*\*/g,'')).filter(line=>line&&!/^#{1,6}\s/.test(line)&&!/^[-*_]{3,}$/.test(line));
   const pairs=[];let original='';
@@ -88,8 +84,12 @@ async function createArticle(){
   if(!pairs?.length){$('importError').textContent='No original/translation pairs found.';return}
   if(pairs.length>500){$('importError').textContent='A session can contain up to 500 sentence pairs.';return}
   const sourceLanguage=$('sourceLanguage').value,targetLanguage=$('targetLanguage').value;
+  const sourceType=$('articleSourceType').value,sourceLabel=sourceType==='other'?$('articleSourceCustom').value.trim():'';
+  const sourceUrl=$('articleSourceUrl').value.trim();
+  if(sourceType==='other'&&!sourceLabel){$('importError').textContent='Enter a name for this source.';return}
+  if(sourceUrl){try{const parsedUrl=new URL(sourceUrl);if(!['http:','https:'].includes(parsedUrl.protocol))throw Error()}catch{$('importError').textContent='Enter a valid http or https URL.';return}}
   const button=$('createArticle');button.disabled=true;button.textContent='Saving sentence pairs...';$('importError').textContent='';
-  const article={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),title:$('articleTitle').value.trim()||'Untitled article',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),source:fromFile?'md':'paste',sourceLanguage,targetLanguage,playTranslation:true,totalChars:content.length,sourceText:content,sentences:pairs.map(pair=>({english:pair.original,chinese:pair.translation})),currentIndex:0,completedCount:0};
+  const article={id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),title:$('articleTitle').value.trim()||'Untitled article',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),source:fromFile?'md':'paste',sourceType,sourceLabel,sourceUrl:sourceUrl||'',folderId:state.libraryFolderId||null,sourceLanguage,targetLanguage,playTranslation:true,totalChars:content.length,sourceText:content,sentences:pairs.map(pair=>({english:pair.original,chinese:pair.translation})),currentIndex:0,completedCount:0};
   state.data.articles.unshift(article);state.activeArticleId=article.id;state.sentenceIndex=0;saveData();closeImport();button.disabled=false;button.innerHTML='Save and start listening <span>&#8594;</span>';setView('player');showToast(`Saved ${pairs.length} sentence pairs.`);
 }
 const sentenceListToggle=$('toggleSentenceList');
@@ -123,3 +123,265 @@ document.getElementById('playerView').addEventListener('touchend',event=>{if(!st
 document.addEventListener('keydown',event=>{if(!state.awaitingAnki)return;const ratings={ArrowDown:'again',ArrowLeft:'hard',ArrowUp:'good',ArrowRight:'easy'};if(ratings[event.key]){event.preventDefault();applyAnkiRating(ratings[event.key])}});
 syncPlaybackMode();
 syncAnkiInputMode();
+
+state.libraryFolderId = null;
+state.data.folders = Array.isArray(state.data.folders) ? state.data.folders : [];
+
+function safeArticleUrl(value) {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch (_) { return ''; }
+}
+function articleSourceName(article) {
+  if (article.sourceType === 'other') return article.sourceLabel || 'Other';
+  return ({ youtube: 'YouTube', book: '\u66f8\u672c' })[article.sourceType] || '';
+}
+function renderLibrary() {
+  const grid = $('libraryGrid'), folderGrid = $('libraryFolders');
+  const folders = Array.isArray(state.data.folders) ? state.data.folders : [];
+  let selectedId = state.libraryFolderId || null;
+  if (selectedId && !folders.some(folder => folder.id === selectedId)) {
+    state.libraryFolderId = null;
+    selectedId = null;
+  }
+  const sortMode = state.data.librarySort || 'date';
+  if ($('librarySort')) $('librarySort').value = sortMode;
+  const articles = state.data.articles.filter(article => !selectedId || article.folderId === selectedId);
+  articles.sort((a, b) => sortMode === 'name'
+    ? (a.title || '').localeCompare(b.title || '', 'zh-TW')
+    : Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0));
+  $('librarySummary').textContent = selectedId
+    ? articles.length + ' / ' + state.data.articles.length + ' \u7bc7\u6587\u7ae0'
+    : state.data.articles.length + ' \u7bc7\u6587\u7ae0';
+  grid.innerHTML = articles.map(article => {
+    const count = article.sentences && article.sentences.length || 0;
+    const pct = count ? Math.round((article.currentIndex || 0) / count * 100) : 0;
+    const label = (article.title || 'Untitled').split(/\s+/).slice(0, 3).join(' ');
+    const source = articleSourceName(article);
+    const url = safeArticleUrl(article.sourceUrl || '');
+    const sourceLine = source
+      ? '<p class="article-source">\u4f86\u6e90\uff1a' + escapeHtml(source) + (url ? ' · <a href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">\u7db2\u5740 \u2197</a>' : '') + '</p>'
+      : '';
+    return '<article class="library-card" data-article="' + escapeHtml(article.id) + '" draggable="true"><div class="continue-cover"><span>LISTENING NOTES</span><strong>' + escapeHtml(label) + '</strong></div><h3>' + escapeHtml(article.title || 'Untitled') + '</h3><p>' + count + ' \u53e5 · ' + new Date(article.createdAt).toLocaleDateString('zh-TW') + '</p>' + sourceLine + '<div class="progress-track"><div class="progress-fill" style="width:' + Math.min(100, pct) + '%"></div></div><div class="library-card-footer"><span>' + (article.currentIndex || 0) + ' / ' + count + ' \u5df2\u5b8c\u6210</span><span>' + pct + '%</span></div><button class="delete-article" type="button" title="\u522a\u9664\u6587\u7ae0" aria-label="\u522a\u9664\u6587\u7ae0">×</button></article>';
+  }).join('');
+  $('emptyLibrary').classList.toggle('hidden', articles.length > 0);
+  const folderItems = [{ id: '', name: '\u5168\u90e8\u6587\u7ae0', count: state.data.articles.length }];
+  folders.forEach(folder => folderItems.push({
+    id: folder.id, name: folder.name,
+    count: state.data.articles.filter(article => article.folderId === folder.id).length
+  }));
+  folderGrid.innerHTML = folderItems.map(folder =>
+    '<div class="folder-card' + ((state.libraryFolderId || '') === folder.id ? ' active' : '') + '" data-folder="' + escapeHtml(folder.id) + '" tabindex="0" role="button"><span class="folder-icon">▰</span><span class="folder-copy"><strong>' + escapeHtml(folder.name) + '</strong><small>' + folder.count + ' \u7bc7\u6587\u7ae0</small></span>' + (folder.id ? '<button class="folder-delete" type="button" title="Delete folder" aria-label="Delete folder">×</button>' : '') + '</div>'
+  ).join('');
+  folderGrid.querySelectorAll('[data-folder]').forEach(card => {
+    card.addEventListener('click', event => {
+      if (event.target.closest('.folder-delete, .folder-public-toggle')) return;
+      state.libraryFolderId = card.dataset.folder || null;
+      renderLibrary();
+    });
+    card.addEventListener('keydown', event => {
+      if (event.target !== card) return;
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); card.click(); }
+    });
+    card.addEventListener('dragover', event => { event.preventDefault(); card.classList.add('drag-over'); });
+    card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+    card.addEventListener('drop', event => {
+      event.preventDefault();
+      card.classList.remove('drag-over');
+      const article = state.data.articles.find(item => item.id === event.dataTransfer.getData('text/plain'));
+      if (!article) return;
+      article.folderId = card.dataset.folder || null;
+      saveData();
+      render();
+      showToast('\u5df2\u79fb\u81f3\u8cc7\u6599\u593e\u3002');
+    });
+  });
+  folderGrid.querySelectorAll('.folder-delete').forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    const folderId = button.closest('[data-folder]').dataset.folder;
+    const folder = folders.find(item => item.id === folderId);
+    if (!folder || !window.confirm('\u522a\u9664\u8cc7\u6599\u593e\u300c' + folder.name + '\u300d\uff1f\u6587\u7ae0\u6703\u4fdd\u7559\u5728\u6587\u7ae0\u5eab\u3002')) return;
+    state.data.folders = folders.filter(item => item.id !== folderId);
+    state.data.articles.forEach(article => { if (article.folderId === folderId) article.folderId = null; });
+    if (state.libraryFolderId === folderId) state.libraryFolderId = null;
+    saveData();
+    if (folder.isPublic) requestPublicSync();
+    render();
+  }));
+  folderGrid.querySelectorAll('[data-folder]').forEach(card => {
+    const folder = folders.find(item => item.id === card.dataset.folder);
+    if (!folder) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'folder-public-toggle';
+    button.textContent = folder.isPublic ? '\u5df2\u516c\u958b' : '\u516c\u958b';
+    button.title = '\u516c\u958b\u5f8c\u5176\u4ed6\u767b\u5165\u5e33\u6236\u53ef\u5c0e\u5165\u6b64\u8cc7\u6599\u593e\u53ca\u5167\u542b\u6587\u7ae0';
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      if (!folder.isPublic && !window.confirm('\u8a2d\u70ba\u516c\u958b\u5f8c\uff0c\u5176\u4ed6\u767b\u5165\u5e33\u6236\u53ef\u5c0e\u5165\u6b64\u8cc7\u6599\u593e\u548c\u88e1\u9762\u7684\u6587\u7ae0\uff0c\u5305\u542b\u539f\u6587\u3001\u7ffb\u8b6f\u548c\u4f86\u6e90\u7db2\u5740\u3002\u7e7c\u7e8c\u55ce\uff1f')) return;
+      folder.isPublic = !folder.isPublic;
+      saveData();
+      requestPublicSync();
+      renderLibrary();
+    });
+    card.append(button);
+  });
+  grid.querySelectorAll('[data-article]').forEach(card => {
+    card.addEventListener('click', event => {
+      if (event.target.closest('.delete-article, .publication-toggle, a')) return;
+      openArticle(card.dataset.article);
+    });
+    card.addEventListener('dragstart', event => {
+      event.dataTransfer.setData('text/plain', card.dataset.article);
+      event.dataTransfer.effectAllowed = 'move';
+      card.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+    card.querySelector('.delete-article').addEventListener('click', event => {
+      event.stopPropagation();
+      removeArticle(card.dataset.article);
+    });
+    const article = state.data.articles.find(item => item.id === card.dataset.article);
+    const publicationButton = document.createElement('button');
+    publicationButton.type = 'button';
+    publicationButton.className = 'publication-toggle';
+    publicationButton.textContent = article.isPublic ? '\u5df2\u516c\u958b' : '\u8a2d\u70ba\u516c\u958b';
+    publicationButton.title = '\u516c\u958b\u5f8c\u5176\u4ed6\u767b\u5165\u5e33\u6236\u53ef\u700f\u89bd\u548c\u5c0e\u5165';
+    publicationButton.addEventListener('click', event => {
+      event.stopPropagation();
+      if (!article.isPublic && !window.confirm('\u8a2d\u70ba\u516c\u958b\u5f8c\uff0c\u5176\u4ed6\u767b\u5165\u5e33\u6236\u90fd\u53ef\u700f\u89bd\u548c\u5c0e\u5165\u6b64\u6587\u7ae0\u3002\u5167\u5bb9\u6703\u5305\u542b\u539f\u6587\u3001\u7ffb\u8b6f\u548c\u4f86\u6e90\u7db2\u5740\u3002\u7e7c\u7e8c\u55ce\uff1f')) return;
+      article.isPublic = !article.isPublic;
+      saveData();
+      requestPublicSync();
+      renderLibrary();
+    });
+    card.append(publicationButton);
+  });
+}
+function addLibraryFolder() {
+  const input = $('folderNameInput');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  const cleanName = name.slice(0, 60);
+  if (state.data.folders.some(folder => folder.name.toLocaleLowerCase() === cleanName.toLocaleLowerCase())) {
+    showToast('\u5df2\u6709\u540c\u540d\u7684\u8cc7\u6599\u593e\u3002');
+    input.focus();
+    return;
+  }
+  const folder = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), name: cleanName, createdAt: new Date().toISOString(), isPublic: false };
+  state.data.folders.push(folder);
+  input.value = '';
+  $('folderCreatePanel').classList.add('hidden');
+  saveData();
+  render();
+  showToast('\u5df2\u5efa\u7acb\u8cc7\u6599\u593e\uff0c\u53ef\u5c07\u6587\u7ae0\u62d6\u9032\u8cc7\u6599\u593e');
+}
+function initLibraryControls() {
+  $('createFolder').addEventListener('click', () => {
+    $('folderCreatePanel').classList.remove('hidden');
+    $('folderNameInput').focus();
+  });
+  $('saveFolder').addEventListener('click', addLibraryFolder);
+  $('cancelFolder').addEventListener('click', () => { $('folderCreatePanel').classList.add('hidden'); $('folderNameInput').value = ''; });
+  $('folderNameInput').addEventListener('keydown', event => { if (event.key === 'Enter') addLibraryFolder(); if (event.key === 'Escape') $('cancelFolder').click(); });
+  $('librarySort').addEventListener('change', event => {
+    state.data.librarySort = event.target.value;
+    saveData();
+    renderLibrary();
+  });
+  $('articleSourceType').addEventListener('change', event => {
+    $('customSourceWrap').classList.toggle('hidden', event.target.value !== 'other');
+  });
+  $('refreshShared').addEventListener('click', loadSharedLibrary);
+  $('sharedSearch').addEventListener('input', renderShared);
+}
+initLibraryControls();
+
+state.sharedItems = [];
+state.sharedLoading = false;
+state.sharedError = '';
+
+function requestPublicSync() { if (window.syncPublicLibrary) window.syncPublicLibrary(state.data).then(ok => { if (!ok) showToast('\u516c\u958b\u8a2d\u5b9a\u672a\u540c\u6b65\uff0c\u8acb\u6aa2\u67e5 Supabase SQL \u8207\u9023\u7dda'); }); }
+function renderShared() {
+  const search = ($('sharedSearch').value || '').trim().toLocaleLowerCase();
+  const items = (state.sharedItems || []).filter(item => (item.title || '').toLocaleLowerCase().includes(search));
+  $('sharedSummary').textContent = state.sharedLoading
+    ? '\u6b63\u5728\u8f09\u5165\u516c\u958b\u5167\u5bb9\u2026'
+    : state.sharedError || (items.length + ' \u500b\u516c\u958b\u9805\u76ee');
+  $('sharedEmpty').classList.toggle('hidden', items.length > 0 || state.sharedLoading || Boolean(state.sharedError));
+  $('sharedGrid').innerHTML = items.map(item => {
+    const payload = item.payload || {};
+    const article = item.kind === 'article' ? payload.article : null;
+    const folderArticles = item.kind === 'folder' && Array.isArray(payload.articles) ? payload.articles : [];
+    const detail = item.kind === 'folder'
+      ? folderArticles.length + ' \u7bc7\u6587\u7ae0'
+      : ((article && article.sentences && article.sentences.length) || 0) + ' \u53e5';
+    const imported = item.kind === 'folder'
+      ? state.data.folders.some(folder => folder.importedFrom === item.item_id)
+      : state.data.articles.some(value => value.importedFrom === item.item_id);
+    const kind = item.kind === 'folder' ? '\u8cc7\u6599\u593e' : '\u6587\u7ae0';
+    const buttonLabel = imported ? '\u5df2\u5c0e\u5165' : '\u5f15\u5165';
+    return '<article class="shared-card"><div class="shared-kind">' + kind + '</div><h3>' + escapeHtml(item.title || '') + '</h3><p>' + detail + ' \u00b7 ' + new Date(item.updated_at).toLocaleDateString('zh-TW') + '</p><button type="button" class="primary-button shared-import" data-item-id="' + escapeHtml(item.item_id) + '" ' + (imported ? 'disabled' : '') + '>' + buttonLabel + '</button></article>';
+  }).join('');
+  $('sharedGrid').querySelectorAll('.shared-import').forEach(button => button.addEventListener('click', () => {
+    const item = items.find(value => value.item_id === button.dataset.itemId);
+    if (item) importSharedItem(item);
+  }));
+}
+async function loadSharedLibrary() {
+  if (!window.fetchSharedLibrary) {
+    state.sharedError = '\u516c\u958b\u5206\u4eab\u670d\u52d9\u5c1a\u672a\u9023\u7dda';
+    renderShared();
+    return;
+  }
+  state.sharedLoading = true;
+  state.sharedError = '';
+  renderShared();
+  try {
+    state.sharedItems = await window.fetchSharedLibrary();
+  } catch (error) {
+    state.sharedError = error.message + ' (\u8acb\u6aa2\u67e5\u662f\u5426\u5df2\u57f7\u884c\u6700\u65b0\u7248\u7684 supabase-setup.sql)';
+  } finally {
+    state.sharedLoading = false;
+    renderShared();
+  }
+}
+function cloneSharedArticle(source, folderId, importId) {
+  const sentences = Array.isArray(source.sentences) ? source.sentences.map(sentence => ({
+    english: String(sentence.english || ''), chinese: String(sentence.chinese || '')
+  })) : [];
+  return {
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+    title: String(source.title || 'Imported article'),
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    source: 'shared', sourceType: String(source.sourceType || ''),
+    sourceLabel: String(source.sourceLabel || ''), sourceUrl: safeArticleUrl(source.sourceUrl || ''),
+    sourceLanguage: source.sourceLanguage || 'en', targetLanguage: source.targetLanguage || 'zh-TW',
+    totalChars: Number(source.totalChars) || 0, sourceText: String(source.sourceText || ''),
+    sentences, currentIndex: 0, completedCount: 0, playTranslation: true,
+    folderId: folderId || null, importedFrom: importId
+  };
+}
+function importSharedItem(item) {
+  if (item.kind === 'article') {
+    if (!item.payload || !item.payload.article || !Array.isArray(item.payload.article.sentences)) {
+      showToast('\u7121\u6cd5\u5c0e\u5165\uff1a\u516c\u958b\u6587\u7ae0\u683c\u5f0f\u4e0d\u6b63\u78ba');
+      return;
+    }
+    state.data.articles.unshift(cloneSharedArticle(item.payload.article, null, item.item_id));
+  } else if (item.kind === 'folder') {
+    const payload = item.payload || {}, sourceArticles = Array.isArray(payload.articles) ? payload.articles : [];
+    const folder = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random(),
+      name: String(payload.folder && payload.folder.name || item.title || 'Imported folder'),
+      createdAt: new Date().toISOString(), isPublic: false, importedFrom: item.item_id
+    };
+    state.data.folders.push(folder);
+    sourceArticles.forEach(article => state.data.articles.push(cloneSharedArticle(article, folder.id, null)));
+  } else return;
+  saveData();
+  render();
+  renderShared();
+  showToast('\u5df2\u5c0e\u5165\u81f3\u4f60\u7684\u6587\u7ae0\u5eab');
+}
