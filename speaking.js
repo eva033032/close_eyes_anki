@@ -23,18 +23,21 @@
   function speakTeacherReply(teacher) {
     if (!speakingData().autoSpeak || !('speechSynthesis' in window) || !window.SpeechSynthesisUtterance) return;
     const phrases = [
-      ...Array(speakingData().correctionSpeakCount).fill(String(teacher.correction || '').trim()),
-      String(teacher.question || '').trim()
-    ].filter(Boolean);
-    if (!phrases.length) return;
+      ...Array(speakingData().correctionSpeakCount).fill({ text: String(teacher.correction || '').trim(), lang: 'en-US' }),
+      ...(String(teacher.note || '').trim() ? [{ text: String(teacher.note).trim(), lang: 'zh-TW' }] : []),
+      ...(String(teacher.question || '').trim() ? [{ text: String(teacher.question).trim(), lang: 'en-US' }] : [])
+    ];
+    if (!phrases.length || !phrases[0].text) return;
     const runId = ++speakingSpeechRunId;
     window.speechSynthesis.cancel();
     let index = 0;
     const playNext = () => {
       if (runId !== speakingSpeechRunId || index >= phrases.length) return;
-      const utterance = new SpeechSynthesisUtterance(phrases[index++]);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.95;
+      const phrase = phrases[index++];
+      if (!phrase.text) { playNext(); return; }
+      const utterance = new SpeechSynthesisUtterance(phrase.text);
+      utterance.lang = phrase.lang;
+      utterance.rate = phrase.lang === 'zh-TW' ? 0.92 : 0.95;
       utterance.onend = () => { if (runId === speakingSpeechRunId) setTimeout(playNext, index < phrases.length ? 280 : 0); };
       utterance.onerror = () => { if (runId === speakingSpeechRunId) setTimeout(playNext, 100); };
       window.speechSynthesis.speak(utterance);
