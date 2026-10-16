@@ -7,6 +7,7 @@
   state.speakingBusy = false;
   state.speakingReview = null;
   state.speakingRecorder = null;
+  let speakingSpeechRunId = 0;
 
   function speakingData() {
     state.data.speaking = state.data.speaking && typeof state.data.speaking === 'object'
@@ -15,7 +16,30 @@
     data.messages = Array.isArray(data.messages) ? data.messages : [];
     data.cards = Array.isArray(data.cards) ? data.cards : [];
     data.grammarErrors = Array.isArray(data.grammarErrors) ? data.grammarErrors : [];
+    data.autoSpeak = data.autoSpeak !== false;
+    data.correctionSpeakCount = Math.max(1, Math.min(5, Number(data.correctionSpeakCount) || 2));
     return data;
+  }
+  function speakTeacherReply(teacher) {
+    if (!speakingData().autoSpeak || !('speechSynthesis' in window) || !window.SpeechSynthesisUtterance) return;
+    const phrases = [
+      ...Array(speakingData().correctionSpeakCount).fill(String(teacher.correction || '').trim()),
+      String(teacher.question || '').trim()
+    ].filter(Boolean);
+    if (!phrases.length) return;
+    const runId = ++speakingSpeechRunId;
+    window.speechSynthesis.cancel();
+    let index = 0;
+    const playNext = () => {
+      if (runId !== speakingSpeechRunId || index >= phrases.length) return;
+      const utterance = new SpeechSynthesisUtterance(phrases[index++]);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.95;
+      utterance.onend = () => { if (runId === speakingSpeechRunId) setTimeout(playNext, index < phrases.length ? 280 : 0); };
+      utterance.onerror = () => { if (runId === speakingSpeechRunId) setTimeout(playNext, 100); };
+      window.speechSynthesis.speak(utterance);
+    };
+    playNext();
   }
   function signedIn() {
     if (window.currentSupabaseUserId) return true;
@@ -224,6 +248,8 @@
   }
   function renderSpeaking() {
     renderMessages(); renderGrammarPrompt(); renderReviewPanel(); renderSavedCards();
+    $('speakingAutoSpeak').checked = speakingData().autoSpeak;
+    $('speakingCorrectionRepeats').value = String(speakingData().correctionSpeakCount);
     $('speakingStatus').textContent = state.speakingStatus || '';
     $('speakingStatus').classList.toggle('is-error', Boolean(state.speakingError));
     $('speakingComposer').classList.toggle('hidden', Boolean(state.speakingReview));
@@ -253,6 +279,7 @@
       const source = data.messages[data.messages.length - 1];
       const teacher = { id: id(), role: 'assistant', replyTo: source.id, correction: String(result.correction || content), note: String(result.note || ''), question: String(result.question || 'What do you think?'), grammarIssue: result.grammarIssue || null, at: Date.now() };
       data.messages.push(teacher); updateGrammarIssue(teacher.grammarIssue); saveData();
+      speakTeacherReply(teacher);
       state.speakingStatus = ''; state.speakingError = false;
     } catch (error) { state.speakingStatus = error.message || 'AI request failed.'; state.speakingError = true; }
     finally { state.speakingBusy = false; renderSpeaking(); }
@@ -404,6 +431,8 @@
     $('saveSpeakingKeys')?.addEventListener('click', saveSpeakingKeys);
     $('clearSpeakingKeys')?.addEventListener('click', clearSpeakingKeys);
     $('sendSpeaking').addEventListener('click', () => state.speakingReview ? submitReviewAnswer() : sendConversation());
+    $('speakingAutoSpeak').addEventListener('change', event => { speakingData().autoSpeak = event.currentTarget.checked; if (!event.currentTarget.checked) { speakingSpeechRunId += 1; window.speechSynthesis?.cancel(); } saveData(); });
+    $('speakingCorrectionRepeats').addEventListener('change', event => { speakingData().correctionSpeakCount = Math.max(1, Math.min(5, Number(event.currentTarget.value) || 2)); saveData(); });
     $('speakingInput').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendConversation(); } });
     $('speakingMic').addEventListener('click', toggleRecording);
     $('newSpeakingChat').addEventListener('click', () => { if (!signedIn() || !window.confirm('\u958b\u59cb\u65b0\u5c0d\u8a71\u6703\u6e05\u9664\u76ee\u524d\u5c0d\u8a71\u6b77\u53f2\uff0c\u5df2\u5b58\u5165 Anki \u7684\u5361\u7247\u6703\u4fdd\u7559\u3002\u7e7c\u7e8c\u55ce\uff1f')) return; speakingData().messages = []; state.speakingReview = null; state.speakingStatus = ''; saveData(); renderSpeaking(); });

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261016-11" />
+  <link rel="stylesheet" href="styles.css?v=20261016-12" />
 </head>
 <body>
   <div class="app-shell">
@@ -60,6 +60,7 @@
         <div class="speaking-review-panel hidden" id="speakingReviewPanel"></div>
         <section class="speaking-chat-panel">
           <div class="speaking-chat-heading"><div><span class="eyebrow">YOUR CONVERSATION</span><h2>&#33521;&#25991;&#23565;&#35441;</h2></div><button id="newSpeakingChat" type="button" class="secondary-button">&#26032;&#23565;&#35441;</button></div>
+          <div class="speaking-voice-controls"><label><input type="checkbox" id="speakingAutoSpeak" checked> &#33258;&#21205;&#26391;&#35712;</label><label for="speakingCorrectionRepeats">NATIVE CORRECTION &#26391;&#35712;&#27425;&#25976;<select id="speakingCorrectionRepeats" class="text-input"><option value="1">1 &#27425;</option><option value="2" selected>2 &#27425;</option><option value="3">3 &#27425;</option><option value="4">4 &#27425;</option><option value="5">5 &#27425;</option></select></label></div>
           <div id="speakingMessages" class="speaking-messages" aria-live="polite"></div>
           <div id="speakingStatus" class="speaking-status" aria-live="polite"></div>
           <div class="speaking-composer" id="speakingComposer"><textarea id="speakingInput" class="text-input" rows="2" placeholder="&#29992;&#33521;&#25991;&#25171;&#23383;&#65292;&#25110;&#25353;&#40670;&#40670;&#38899;&#36664;&#20837;&#12290;"></textarea><div class="speaking-composer-actions"><button type="button" class="secondary-button" id="speakingMic">&#127908; &#35486;&#38899;&#36664;&#20837;</button><button type="button" class="primary-button" id="sendSpeaking">&#36865;&#20986;</button></div></div>
@@ -81,6 +82,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js?v=20261016-8"></script>
   <script src="cloud-sync.js?v=20261016-9"></script>
-  <script src="speaking.js?v=20261016-9"></script>
+  <script src="speaking.js?v=20261016-10"></script>
 </body>
 </html>
