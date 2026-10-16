@@ -4,7 +4,7 @@
   const PUBLISHABLE_KEY = 'sb_publishable_1EWOYLfSrshlYW_d-iPqhA_njZv9zCC';
   const TABLE = 'user_learning_data';
   const client = window.supabase?.createClient(PROJECT_URL, PUBLISHABLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false }
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
   });
   const $ = id => document.getElementById(id);
   const modal = $('authModal'), message = $('authMessage'), authButton = $('authButton');
@@ -26,7 +26,7 @@
     if (signedIn) showMessage('正在確認 Supabase 雲端資料…');
   }
   function emptyData() {
-    return { articles: [], folders: [], saved: [], lastSession: null, review: {}, speaking: { messages: [], cards: [], grammarErrors: [] }, listeningSeconds: 0, dayStamp: '', streak: 0, lastStudyDay: '' };
+    return { articles: [], folders: [], saved: [], lastSession: null, review: {}, repeatCount: 1, speaking: { messages: [], cards: [], grammarErrors: [] }, listeningSeconds: 0, dayStamp: '', streak: 0, lastStudyDay: '' };
   }
   function publicArticle(article) {
     return {
@@ -122,9 +122,6 @@
       localStorage.removeItem('close-eyes-v1');
       Object.keys(localStorage).filter(key => key.startsWith('close-eyes-cloud-initialized:')).forEach(key => localStorage.removeItem(key));
     } catch (_) {}
-  }
-  function clearPersistedAuthSession() {
-    try { localStorage.removeItem('sb-boxrkjgswlzbxeyvxgta-auth-token'); } catch (_) {}
   }
   async function writeCloud(payload, userId = session?.user?.id) {
     if (!userId) throw new Error('請先登入 Supabase。');
@@ -269,15 +266,14 @@
   $('signOutButton').addEventListener('click', signOut);
   $('closeAuthModal').addEventListener('click', () => modal.classList.add('hidden'));
   $('authPassword').addEventListener('keydown', event => { if (event.key === 'Enter') signIn(); });
-  clearPersistedAuthSession();
   if (!client) {
-    showMessage('Supabase SDK 載入失敗，無法使用此應用程式。', true);
+    showMessage('Supabase SDK \u8f09\u5165\u5931\u6557\uff0c\u7121\u6cd5\u4f7f\u7528\u6b64\u61c9\u7528\u7a0b\u5f0f\u3002', true);
     modal.classList.remove('hidden');
     return;
   }
   modal.classList.remove('hidden');
-  showMessage('登入或建立 Supabase 帳號以載入雲端資料。');
-  client.auth.onAuthStateChange((event, next) => {
+  showMessage('\u6b63\u5728\u6062\u5fa9 Supabase \u767b\u5165\u72c0\u614b\u2026');
+  client.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT') {
       session = null;
       syncReady = false;
@@ -286,5 +282,29 @@
       modal.classList.remove('hidden');
       render();
     }
+  });
+  client.auth.getSession().then(async ({ data, error }) => {
+    if (error) throw error;
+    session = data.session;
+    if (!session) {
+      updateAuthUI();
+      modal.classList.remove('hidden');
+      showMessage('\u8acb\u767b\u5165 Supabase \u5e33\u865f\u4ee5\u540c\u6b65\u5b78\u7fd2\u8cc7\u6599\u3002');
+      return;
+    }
+    updateAuthUI();
+    try {
+      await syncFromCloud(session.user);
+    } catch (e) {
+      syncReady = false;
+      modal.classList.remove('hidden');
+      showMessage(`\u7121\u6cd5\u8f09\u5165 Supabase \u8cc7\u6599\uff1a${e.message}`, true);
+    }
+  }).catch(error => {
+    console.error('Supabase session restore failed:', error);
+    session = null;
+    updateAuthUI();
+    modal.classList.remove('hidden');
+    showMessage(`\u7121\u6cd5\u6062\u5fa9\u767b\u5165\u72c0\u614b\uff1a${error.message}`, true);
   });
 })();
