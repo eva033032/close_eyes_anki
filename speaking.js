@@ -24,7 +24,7 @@
     if (!speakingData().autoSpeak || !('speechSynthesis' in window) || !window.SpeechSynthesisUtterance) return;
     const phrases = [
       ...Array(speakingData().correctionSpeakCount).fill({ text: String(teacher.correction || '').trim(), lang: 'en-US' }),
-      ...(String(teacher.note || '').trim() ? [{ text: String(teacher.note).trim(), lang: 'zh-TW' }] : []),
+      ...(String(teacher.note || '').trim() ? [{ text: String(teacher.note).trim(), lang: 'en-US' }] : []),
       ...(String(teacher.question || '').trim() ? [{ text: String(teacher.question).trim(), lang: 'en-US' }] : [])
     ];
     if (!phrases.length || !phrases[0].text) return;
