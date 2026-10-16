@@ -374,6 +374,13 @@
       content.classList.toggle('hidden', expanded);
       event.currentTarget.textContent = expanded ? '\u5c55\u958b \u2193' : '\u6536\u5408 \u2191';
     });
+    $('toggleSavedCards')?.addEventListener('click', event => {
+      const content = $('speakingSavedCardsContent');
+      const expanded = event.currentTarget.getAttribute('aria-expanded') === 'true';
+      event.currentTarget.setAttribute('aria-expanded', String(!expanded));
+      content.classList.toggle('hidden', expanded);
+      event.currentTarget.textContent = expanded ? '\u5c55\u958b \u2193' : '\u6536\u5408 \u2191';
+    });
     window.addEventListener('supabase-user-changed', event => {
       const nextUserId = event.detail?.userId || null;
       if (state.speakingKeysUserId && state.speakingKeysUserId !== nextUserId) {
