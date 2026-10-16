@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261016-10" />
+  <link rel="stylesheet" href="styles.css?v=20261016-11" />
 </head>
 <body>
   <div class="app-shell">
@@ -51,6 +51,7 @@
           <div class="speaking-key-columns">
             <div class="speaking-key-group"><div class="speaking-key-heading"><strong>Groq</strong><button type="button" class="text-link" data-add-key="groq">+ &#26032;&#22686; API &#37329;&#38000;</button></div><div id="groqKeys" class="speaking-key-list"></div></div>
           </div>
+          <p class="speaking-key-footnote groq-usage-link"><a href="https://console.groq.com/dashboard/usage" target="_blank" rel="noopener noreferrer">&#26597;&#30475; Groq API &#20351;&#29992;&#37327;&#33287;&#38989;&#24230; &#8599;</a></p>
           <div class="speaking-key-actions"><button type="button" class="primary-button" id="saveSpeakingKeys">&#20786;&#23384; API keys &#33267; Supabase</button><button type="button" class="secondary-button" id="clearSpeakingKeys">&#28165;&#38500;&#38642;&#31471; keys</button><span id="speakingKeyStatus" role="status"></span></div>
           <p class="speaking-key-footnote">Groq API keys are encrypted before they are stored in Supabase. The Edge Function decrypts them only for your signed-in account.</p>
           <p class="speaking-key-footnote">Audio for Groq Whisper transcription is sent to Groq for processing.</p>
