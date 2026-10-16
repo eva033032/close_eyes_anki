@@ -74,7 +74,8 @@
       }
       state.speakingKeysLoaded = true;
       state.speakingKeysUserId = window.currentSupabaseUserId;
-      setKeyStatus('已載入此帳戶的雲端 keys。');
+      const hasSavedKeys = ['gemini', 'groq'].some(provider => state.speakingKeys[provider].some(key => key.trim()));
+      setKeyStatus(hasSavedKeys ? '已載入此帳戶儲存的 API keys。' : '此帳戶尚未儲存 API 金鑰。');
     } catch (error) {
       setKeyStatus(error.message || '雲端 keys 載入失敗。', true);
     }

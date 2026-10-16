@@ -44,15 +44,15 @@
 
       <section class="view" id="speakingView">
         <div class="page-intro"><div class="eyebrow">SPEAKING STUDIO</div><h1>&#33521;&#25991;&#21475;&#35498;&#32244;&#32722;</h1><p>&#33287;&#33521;&#25991;&#32769;&#24107;&#33258;&#28982;&#23565;&#35441;&#65292;&#25226;&#20462;&#27491;&#21477;&#23376;&#25910;&#36914;&#35079;&#32722;&#21345;&#12290;</p></div>
-        <div class="speaking-key-note"><strong>&#38656;&#35201; API key &#25165;&#33021;&#20351;&#29992;</strong><span>&#21487;&#22635; Gemini &#25110; Groq API key&#65292;&#20063;&#21487;&#21516;&#26178;&#22635;&#22810;&#32068;&#20570;&#20633;&#25563;&#12290;&#37329;&#37454;&#26371;&#30001; Supabase Edge Function &#21152;&#23494;&#24460;&#20786;&#23384;&#65292;&#20381;&#30331;&#20837;&#24115;&#34399;&#38548;&#38626;&#65292;&#21487;&#22312;&#19981;&#21516;&#35037;&#32622;&#20351;&#29992;&#12290;</span></div>
+        <div class="speaking-key-note"><strong>&#38656;&#35201; API key &#25165;&#33021;&#20351;&#29992;</strong><span>&#21487;&#22635; Gemini &#25110; Groq API key&#65292;&#20063;&#21487;&#21516;&#26178;&#22635;&#22810;&#32068;&#20570;&#20633;&#25563;&#12290;API &#37329;&#38000;&#26371;&#30001; Supabase Edge Function &#21152;&#23494;&#24460;&#20786;&#23384;&#65292;&#20381;&#30331;&#20837;&#24115;&#34399;&#38548;&#38626;&#65292;&#21487;&#22312;&#19981;&#21516;&#35037;&#32622;&#20351;&#29992;&#12290;</span></div>
         <section class="speaking-settings">
           <div class="speaking-settings-heading"><div><h2>&#26381;&#21209;&#35373;&#23450;</h2><p>&#23565;&#35441;&#21487;&#29992; Gemini &#25110; Groq&#65307;&#35486;&#38899;&#36681;&#25991;&#23383;&#20351;&#29992; Groq Whisper&#12290;</p></div><label class="speaking-provider-label">AI &#23565;&#35441;<select id="speakingProvider" class="text-input"><option value="gemini">Gemini</option><option value="groq">Groq</option></select></label></div>
           <div class="speaking-key-columns">
-            <div class="speaking-key-group"><div class="speaking-key-heading"><strong>Gemini</strong><button type="button" class="text-link" data-add-key="gemini">+ &#26032;&#22686;&#37329;&#37454;</button></div><div id="geminiKeys" class="speaking-key-list"></div></div>
-            <div class="speaking-key-group"><div class="speaking-key-heading"><strong>Groq</strong><button type="button" class="text-link" data-add-key="groq">+ &#26032;&#22686;&#37329;&#37454;</button></div><div id="groqKeys" class="speaking-key-list"></div></div>
+            <div class="speaking-key-group"><div class="speaking-key-heading"><strong>Gemini</strong><button type="button" class="text-link" data-add-key="gemini">+ &#26032;&#22686; API &#37329;&#38000;</button></div><div id="geminiKeys" class="speaking-key-list"></div></div>
+            <div class="speaking-key-group"><div class="speaking-key-heading"><strong>Groq</strong><button type="button" class="text-link" data-add-key="groq">+ &#26032;&#22686; API &#37329;&#38000;</button></div><div id="groqKeys" class="speaking-key-list"></div></div>
           </div>
           <div class="speaking-key-actions"><button type="button" class="primary-button" id="saveSpeakingKeys">&#20786;&#23384; API keys &#33267; Supabase</button><button type="button" class="secondary-button" id="clearSpeakingKeys">&#28165;&#38500;&#38642;&#31471; keys</button><span id="speakingKeyStatus" role="status"></span></div>
-          <p class="speaking-key-footnote">&#37329;&#37454;&#22312; Supabase &#20013;&#20197;&#21152;&#23494;&#23494;&#25991;&#20786;&#23384;&#65292;&#30001;&#26381;&#21209;&#31471;&#23494;&#38000;&#35299;&#23494;&#65307;&#21482;&#26377;&#30331;&#20837;&#30340;&#24115;&#34399;&#21487;&#35835;&#21462;&#33258;&#24049;&#30340;&#37329;&#37454;&#12290;&#25353;&#12300;&#20786;&#23384;&#12301;&#24460;&#65292;&#21487;&#26044;&#20854;&#20182;&#35037;&#32622;&#30331;&#20837;&#21516;&#19968;&#24115;&#34399;&#21462;&#29992;&#12290;&#20813;&#36027;&#37197;&#38989;&#20381;&#21508;&#23478;&#26381;&#21209;&#21830;&#38480;&#21046;&#12290;</p><p class="speaking-key-footnote">Gemini free-tier conversation data may be used by Google to improve its products. Avoid entering sensitive personal information.</p>
+          <p class="speaking-key-footnote">Gemini / Groq API &#37329;&#38000;&#26371;&#22312; Supabase &#20013;&#20197;&#21152;&#23494;&#23494;&#25991;&#20786;&#23384;&#65292;&#26381;&#21209;&#31471;&#26377;&#19968;&#32068;&#29420;&#31435;&#30340;&#21152;&#23494;&#37329;&#38000;&#20358;&#35299;&#23494;&#12290;&#21482;&#26377;&#30331;&#20837;&#30340;&#24115;&#34399;&#21487;&#21462;&#29992;&#33258;&#24049;&#30340; API &#37329;&#38000;&#12290;&#25353;&#12300;&#20786;&#23384;&#12301;&#24460;&#65292;&#21487;&#22312;&#20854;&#20182;&#35037;&#32622;&#30331;&#20837;&#21516;&#19968;&#24115;&#34399;&#20351;&#29992;&#12290;&#20813;&#36027;&#37197;&#38989;&#20381;&#21508;&#26381;&#21209;&#21830;&#38480;&#21046;&#12290;</p><p class="speaking-key-footnote">Gemini free-tier conversation data may be used by Google to improve its products. Avoid entering sensitive personal information.</p>
         </section>
         <div class="speaking-review-panel hidden" id="speakingReviewPanel"></div>
         <section class="speaking-chat-panel">
@@ -78,6 +78,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js?v=20261016-8"></script>
   <script src="cloud-sync.js?v=20261016-9"></script>
-  <script src="speaking.js?v=20261016-4"></script>
+  <script src="speaking.js?v=20261016-5"></script>
 </body>
 </html>
