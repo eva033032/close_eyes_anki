@@ -34,3 +34,9 @@
 
 
 .speaking-saved-deck{margin-top:26px}.speaking-saved-deck h2{margin:0 0 12px;font:600 19px var(--serif)}.speaking-library-card{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;margin-bottom:8px;background:#fff;border:1px solid #eeede7;border-radius:8px}.speaking-library-card>div{min-width:0}.speaking-library-card span,.speaking-library-card strong,.speaking-library-card small{display:block}.speaking-library-card span{margin-bottom:3px;color:#90968c;font-size:9px}.speaking-library-card strong{overflow-wrap:anywhere;font:500 14px var(--serif)}.speaking-library-card small{margin-top:3px;color:#81877d;font-size:11px}
+
+.review-gesture-surface{display:none}@media(max-width:760px){.review-gesture-surface{display:flex;grid-column:1/-1;min-height:44px;align-items:center;justify-content:center;margin-top:9px;border:1px dashed #d9dfd5;border-radius:6px;background:#f8faf6;color:#74816f;font-size:10px;touch-action:none;user-select:none;-webkit-user-select:none;transition:background .12s,border-color .12s}.review-gesture-surface.is-swiping{background:#eaf1e9;border-color:#8da78f;color:#315d49}}
+
+.sentence-list-heading{gap:10px}.sentence-list-heading>strong{margin-right:auto}.sentence-list-toggle{flex:0 0 auto;min-height:34px;padding:6px 11px;border:1px solid #e2e6df;border-radius:5px;background:#fff;color:#557254;font:500 10px var(--chinese);white-space:nowrap;cursor:pointer}.sentence-list-toggle:hover{background:#f3f7f1;border-color:#cbd8c8}.sentence-list-toggle:focus-visible{outline:2px solid #8da78f;outline-offset:2px}
+
+@media(min-width:761px){.sidebar{overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:thin;scrollbar-color:#d5d9d0 transparent}.main-nav,.sidebar-bottom{flex-shrink:0}.nav-item{flex-shrink:0}}@media(max-width:760px){.sidebar{overflow-x:auto;overflow-y:hidden}}
