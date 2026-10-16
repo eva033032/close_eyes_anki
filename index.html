@@ -44,7 +44,6 @@
 
       <section class="view" id="speakingView">
         <div class="page-intro"><div class="eyebrow">SPEAKING STUDIO</div><h1>&#33521;&#25991;&#21475;&#35498;&#32244;&#32722;</h1><p>&#33287;&#33521;&#25991;&#32769;&#24107;&#33258;&#28982;&#23565;&#35441;&#65292;&#25226;&#20462;&#27491;&#21477;&#23376;&#25910;&#36914;&#35079;&#32722;&#21345;&#12290;</p></div>
-        <div class="speaking-key-note"><strong>&#38656;&#35201; API key &#25165;&#33021;&#20351;&#29992;</strong><span>&#23565;&#35441;&#33287;&#35486;&#38899;&#36681;&#25991;&#23383;&#20351;&#29992; Groq API key&#12290;&#37329;&#38000;&#26371;&#30001; Supabase Edge Function &#21152;&#23494;&#24460;&#20784;&#23384;&#65292;&#20381;&#30331;&#20837;&#24115;&#34399;&#38548;&#38626;&#65292;&#21487;&#22312;&#19981;&#21516;&#35037;&#32622;&#20351;&#29992;&#12290;</span></div>
         <section class="speaking-settings">
           <div class="speaking-settings-heading"><div><h2>API key &#35373;&#23450;</h2><p>Groq &#25903;&#25588;&#33521;&#25991;&#23565;&#35441;&#33287; Whisper &#35486;&#38899;&#36681;&#25991;&#23383;&#12290;</p></div><button type="button" class="secondary-button speaking-settings-toggle" id="toggleSpeakingSettings" aria-expanded="false" aria-controls="speakingSettingsContent">&#23637;&#38283; &#8595;</button></div>
           <div id="speakingSettingsContent" class="hidden">
@@ -57,7 +56,7 @@
           <p class="speaking-key-footnote">Audio for Groq Whisper transcription is sent to Groq for processing.</p>
           </div>
         </section>
-        <div class="speaking-quota-status"><div id="groqQuotaStatus" aria-live="polite">Groq &#38989;&#24230;&#26371;&#22312;&#31532;&#19968;&#27425;&#21628;&#21483; AI &#24460;&#39023;&#31034;&#65306;&#27599;&#26085;&#21097;&#39192;&#35531;&#27714;&#25976;&#33287;&#27599;&#20998;&#37912;&#21097;&#39192; tokens&#12290;</div></div>
+        <div id="groqQuotaPanel" class="speaking-quota-status hidden"><div id="groqQuotaStatus" aria-live="polite"></div></div>
         <div class="speaking-review-panel hidden" id="speakingReviewPanel"></div>
         <section class="speaking-chat-panel">
           <div class="speaking-chat-heading"><div><span class="eyebrow">YOUR CONVERSATION</span><h2>&#33521;&#25991;&#23565;&#35441;</h2></div><button id="newSpeakingChat" type="button" class="secondary-button">&#26032;&#23565;&#35441;</button></div>
@@ -82,6 +81,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js?v=20261016-8"></script>
   <script src="cloud-sync.js?v=20261016-9"></script>
-  <script src="speaking.js?v=20261016-8"></script>
+  <script src="speaking.js?v=20261016-9"></script>
 </body>
 </html>

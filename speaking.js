@@ -113,7 +113,10 @@
       const reset = limits.resetTokens ? ` (重置倒數 ${limits.resetTokens})` : '';
       parts.push(`本分鐘剩餘 tokens ${limits.remainingTokens}${limits.limitTokens != null ? `/${limits.limitTokens}` : ''}${reset}`);
     }
-    if (parts.length) $('groqQuotaStatus').textContent = `Groq 額度：${parts.join(' · ')}`;
+    if (parts.length) {
+      $('groqQuotaStatus').textContent = `Groq 額度：${parts.join(' · ')}`;
+      $('groqQuotaPanel').classList.remove('hidden');
+    }
   }
   async function callAI(action, fields = {}, forcedProvider = null) {
     const provider = forcedProvider || activeProvider();
