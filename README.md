@@ -1,6 +1,6 @@
 # Close Eyes
 
-A sentence listening and spaced-repetition app. Paste paired original and translation sentences, or import a Markdown file with those pairs. Articles, saved sentences, and progress are stored in Supabase and loaded after sign-in. The browser does not persist learning data or the authentication session, so sign in again after reloading the app. No AI translation service is used.
+A sentence listening, speaking practice, and spaced-repetition app. Paste paired original and translation sentences, or import a Markdown file with those pairs. Articles, saved sentences, speaking conversations, speaking cards, and progress are stored in Supabase and loaded after sign-in. The browser does not persist learning data or the authentication session, so sign in again after reloading the app. Speaking API keys can be encrypted and stored per account in Supabase for use across devices.
 
 ## Run locally
 
@@ -20,9 +20,35 @@ The SQL setup is in `supabase-setup.sql`. Run the full file in Supabase SQL Edit
 
 The browser uses the Supabase project URL and publishable key in `cloud-sync.js`. Never put a database password or service-role/secret key in browser code.
 
+## Speaking practice
+
+The Speaking page supports Gemini or Groq for conversation and Groq Whisper for English speech transcription. Users enter their own API keys and explicitly save them to Supabase from the page. The Edge Function encrypts the keys with AES-GCM before storing them in `user_ai_keys`; only the signed-in account can retrieve its keys through the function. The encryption secret must be configured separately and never committed. Speaking messages, saved vocabulary/phrases/sentences, review schedules, and recurring grammar patterns sync through `user_learning_data`.
+
+Deploy the Edge Function once from this folder:
+
+1. In PowerShell opened at the project folder, run `npx supabase login` and complete Supabase CLI authentication.
+2. Run `npx supabase link --project-ref boxrkjgswlzbxeyvxgta`.
+3. Run the full, updated `supabase-setup.sql` in Supabase Dashboard > SQL Editor. It creates the private `user_ai_keys` table.
+4. In PowerShell, create and configure a random encryption secret (do not print or commit it):
+
+   ```powershell
+   $keyBytes = New-Object byte[] 32
+   $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+   $rng.GetBytes($keyBytes)
+   $speakingSecret = [Convert]::ToBase64String($keyBytes)
+   npx supabase secrets set "SPEAKING_KEY_ENCRYPTION_SECRET=$speakingSecret"
+   Remove-Variable speakingSecret,keyBytes,rng
+   ```
+
+5. Run `npx supabase functions deploy speaking-ai`.
+
+Run these CLI commands in the current terminal with the working directory set to this project (`D:\Self_App\close_eyes_anki`). After deployment and the SQL update, sign into the app, enter keys on the Speaking page, and select **Save API keys to Supabase**. Other devices can then retrieve them after signing into that same account. If you later rotate the encryption secret, previously saved keys cannot be decrypted; clear and save them again with the new secret.
+
+Gemini and Groq have their own API key and free-tier limits. The Speaking page shows the required-key notice and key entry fields.
+
 ## Deploy to Vercel
 
-This is a static site; it does not need server functions or AI environment variables. From PowerShell in this folder:
+The frontend is a static site. Speaking AI calls use the Supabase Edge Function above. From PowerShell in this folder:
 
 1. Run `npx vercel@latest login` and complete the browser sign-in.
 2. Run `npx vercel@latest --prod`. If prompted, create a project and accept the current folder as its root.

@@ -51,3 +51,14 @@ drop policy if exists "Owners can unpublish shared library items" on public.shar
 create policy "Owners can unpublish shared library items"
 on public.shared_library_items for delete to authenticated
 using (auth.uid() = owner_id);
+
+-- Per-user AI provider keys are stored as encrypted ciphertext by the speaking-ai Edge Function.
+-- Do not grant direct client access; only the function's service role accesses this table.
+create table if not exists public.user_ai_keys (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  encrypted_keys jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.user_ai_keys enable row level security;
+revoke all on public.user_ai_keys from anon, authenticated, public;

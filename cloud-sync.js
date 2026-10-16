@@ -17,6 +17,7 @@
   function updateAuthUI() {
     const signedIn = Boolean(session);
     window.currentSupabaseUserId = session?.user?.id || null;
+    window.dispatchEvent(new CustomEvent('supabase-user-changed', { detail: { userId: window.currentSupabaseUserId } }));
     authButton.textContent = signedIn ? `已登入：${session.user.email}` : '登入 Supabase';
     authButton.classList.toggle('is-signed-in', signedIn);
     $('signInButton').classList.toggle('hidden', signedIn);
@@ -25,7 +26,7 @@
     if (signedIn) showMessage('正在確認 Supabase 雲端資料…');
   }
   function emptyData() {
-    return { articles: [], folders: [], saved: [], lastSession: null, review: {}, listeningSeconds: 0, dayStamp: '', streak: 0, lastStudyDay: '' };
+    return { articles: [], folders: [], saved: [], lastSession: null, review: {}, speaking: { messages: [], cards: [], grammarErrors: [] }, listeningSeconds: 0, dayStamp: '', streak: 0, lastStudyDay: '' };
   }
   function publicArticle(article) {
     return {
@@ -86,6 +87,17 @@
       return false;
     }
   };
+  window.callSpeakingAI = async payload => {
+    if (!syncReady || !session) throw new Error('請先登入 Supabase。');
+    const { data, error } = await client.functions.invoke('speaking-ai', { body: payload });
+    if (error) {
+      let message = error.message;
+      try { message = (await error.context?.json())?.error || message; } catch (_) {}
+      throw new Error(message);
+    }
+    return data;
+  };
+  window.manageSpeakingKeys = async (action, keys) => window.callSpeakingAI({ action, keys });
   window.fetchSharedLibrary = async () => {
     if (!syncReady || !session) throw new Error('請先登入 Supabase。');
     const { data, error } = await client.from('shared_library_items')
@@ -160,6 +172,10 @@
     remote.folders = Array.isArray(remote.folders) ? remote.folders : [];
     remote.saved = Array.isArray(remote.saved) ? remote.saved : [];
     remote.review = remote.review && typeof remote.review === 'object' ? remote.review : {};
+    remote.speaking = remote.speaking && typeof remote.speaking === 'object' ? remote.speaking : { messages: [], cards: [], grammarErrors: [] };
+    remote.speaking.messages = Array.isArray(remote.speaking.messages) ? remote.speaking.messages.slice(-200) : [];
+    remote.speaking.cards = Array.isArray(remote.speaking.cards) ? remote.speaking.cards : [];
+    remote.speaking.grammarErrors = Array.isArray(remote.speaking.grammarErrors) ? remote.speaking.grammarErrors : [];
     if (!row) await writeCloud(remote, user.id);
     clearLegacyLocalLearningData();
     state.data = remote;

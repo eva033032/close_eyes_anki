@@ -1,6 +1,6 @@
 const state={data:emptyLearningData(),view:'home',activeArticleId:null,sentenceIndex:0,repeatCount:1,playing:false,repeatDone:0,reviewQueue:[],reviewIndex:0,reviewMode:'saved',toastTimer:null,currentSource:'text',fileText:'',filePairs:null};
 const $=id=>document.getElementById(id);const $$=selector=>[...document.querySelectorAll(selector)];
-function emptyLearningData(){return{articles:[],folders:[],saved:[],lastSession:null,review:{},listeningSeconds:0,dayStamp:'',streak:0,lastStudyDay:''}}
+function emptyLearningData(){return{articles:[],folders:[],saved:[],lastSession:null,review:{},speaking:{messages:[],cards:[],grammarErrors:[]},listeningSeconds:0,dayStamp:'',streak:0,lastStudyDay:''}}
 function saveData(){if(typeof window.saveLearningData==='function')window.saveLearningData(state.data)}
 function todayKey(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Taipei'}).format(new Date())}
 function todayLabel(){return new Intl.DateTimeFormat('zh-TW',{timeZone:'Asia/Taipei',year:'numeric',month:'long',day:'numeric',weekday:'long'}).format(new Date())}
